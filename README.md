@@ -1,6 +1,6 @@
 # Databricks MCP Toolkit
 
-**Conecte o Claude Code ao seu workspace Databricks e transforme linguagem natural em queries, análises e notebooks -- sem sair do terminal.**
+**Conecte o Claude Code ao seu workspace Databricks e transforme linguagem natural em queries, análises e notebooks, sem sair do terminal.**
 
 O Databricks MCP Toolkit é um pacote completo de integração entre o [Claude Code](https://docs.anthropic.com/en/docs/claude-code) e o Databricks. Ele inclui um MCP Server com 9 ferramentas, um agente especializado em dados e 4 skills (slash commands) prontos para uso imediato.
 
@@ -10,11 +10,11 @@ O Databricks MCP Toolkit é um pacote completo de integração entre o [Claude C
 
 Analistas e engenheiros de dados passam boa parte do dia alternando entre terminal, notebook, documentação de tabelas e UI do Databricks. Este toolkit elimina essa troca de contexto: você faz perguntas, explora catálogos, roda SQL e gera notebooks PySpark diretamente no Claude Code, usando linguagem natural ou comandos dedicados.
 
-- **Sem troca de contexto** -- tudo acontece no terminal onde você já está
-- **SQL via linguagem natural** -- descreva o que precisa, o agente monta a query
-- **Exploração guiada** -- navegue Unity Catalog de forma progressiva e estruturada
-- **Notebooks prontos** -- gere arquivos `.py` no formato Databricks com um comando
-- **Segurança por padrão** -- credenciais ficam em `.env` local, nunca sobem no git
+- **Sem troca de contexto**: tudo acontece no terminal onde você já está
+- **SQL via linguagem natural**: descreva o que precisa, o agente monta a query
+- **Exploração guiada**: navegue pelo Unity Catalog de forma progressiva e estruturada
+- **Notebooks prontos**: gere arquivos `.py` no formato Databricks com um comando
+- **Segurança por padrão**: credenciais ficam em `.env` local, nunca sobem no git
 
 ---
 
@@ -32,12 +32,12 @@ O toolkit inclui um agente especializado que é acionado automaticamente pelo Cl
 
 **Capacidades:**
 
-1. **Exploração de dados** -- navegar catálogos, schemas e tabelas do Unity Catalog
-2. **SQL Analytics** -- escrever e executar queries SQL otimizadas
-3. **Análise estatística** -- gerar estatísticas descritivas, distribuições, correlações
-4. **Data Quality** -- identificar nulos, duplicatas, outliers e inconsistências
-5. **PySpark** -- escrever e revisar código PySpark para transformações
-6. **Notebooks** -- criar notebooks Databricks com análises completas
+1. **Exploração de dados**: navegar em catálogos, schemas e tabelas do Unity Catalog
+2. **SQL Analytics**: escrever e executar queries SQL otimizadas
+3. **Análise estatística**: gerar estatísticas descritivas, distribuições, correlações
+4. **Data Quality**: identificar nulos, duplicatas, outliers e inconsistências
+5. **PySpark**: escrever e revisar código PySpark para transformações
+6. **Notebooks**: criar notebooks Databricks com análises completas
 
 **Quando é acionado:**
 
@@ -52,11 +52,11 @@ O agente segue uma metodologia consistente: `describe_table` (entender colunas e
 
 ---
 
-## Skills -- Slash Commands
+## Skills - Slash Commands
 
 Skills são atalhos que injetam prompts especializados no Claude Code. Basta digitar o comando no chat.
 
-### `/sql` -- Executar SQL
+### `/sql` - Executar SQL
 
 Executa queries SQL diretamente ou gera SQL a partir de linguagem natural.
 
@@ -70,11 +70,11 @@ Também aceita linguagem natural:
 /sql me mostra as 10 maiores variações do IPCA
 ```
 
-O que acontece por baixo: se você fornece uma query pronta, ela é executada diretamente. Se descreve o que quer, o Claude primeiro inspeciona as tabelas com `describe_table`, monta a query e então executa.
+**O que acontece por baixo:** se você fornece uma query pronta, ela é executada diretamente. Se descreve o que quer, o Claude primeiro inspeciona as tabelas com `describe_table`, monta a query e então executa.
 
 ---
 
-### `/analyze` -- Análise exploratória (EDA)
+### `/analyze` - Análise exploratória (EDA)
 
 Executa uma análise exploratória completa de qualquer tabela.
 
@@ -94,7 +94,7 @@ O resultado é apresentado em markdown organizado, com uma seção final de obse
 
 ---
 
-### `/notebook` -- Criar notebook PySpark
+### `/notebook` - Criar notebook PySpark
 
 Gera um arquivo `.py` no formato nativo de notebooks Databricks.
 
@@ -112,7 +112,7 @@ Gera um arquivo `.py` no formato nativo de notebooks Databricks.
 
 ---
 
-### `/explore` -- Navegar Unity Catalog
+### `/explore` - Navegar pelo Unity Catalog
 
 Navegação progressiva pelo Unity Catalog, do nível mais alto até o detalhe de uma tabela.
 
@@ -160,7 +160,7 @@ A instalação é feita uma única vez por máquina.
 
 ```bash
 # 1. Clone este repositório
-git clone <repo-url> && cd databricks
+git clone git@github.com:rasterxdev/databricks-mcp-toolkit.git && cd databricks
 
 # 2. Rode o instalador
 ./install.sh
@@ -350,7 +350,7 @@ A skill fica disponível imediatamente como `/nome-do-arquivo`. Rode `./install.
 | MCP Server não aparece | Reinicie o Claude Code (`exit` + `claude`) |
 | Erro de autenticação | Verifique se o `.env` tem `DATABRICKS_HOST` e `DATABRICKS_TOKEN` corretos |
 | Nenhum warehouse disponível | Acesse o workspace e inicie um SQL Warehouse |
-| `wait_timeout` error | O timeout máximo da API é 50s -- queries longas podem precisar de polling |
+| `wait_timeout` error | O timeout máximo da API é 50s, queries longas podem precisar de polling |
 | Python não encontrado | Verifique se tem Python 3.10+ instalado (`python3 --version`) |
 | `databricks-mcp-init` não encontrado | Rode `source ~/.zshrc` ou abra um novo terminal |
 | Skills não aparecem | Verifique se `.claude/commands/` existe e tem os arquivos `.md` |

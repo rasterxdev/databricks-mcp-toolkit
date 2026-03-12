@@ -58,11 +58,13 @@ else
     echo "✅ .gitignore criado com .mcp.json"
 fi
 mkdir -p "$PROJECT_DIR/.claude/commands" "$PROJECT_DIR/.claude/agents"
-for file in sql.md analyze.md notebook.md explore.md; do
+for file in sql.md analyze.md notebook.md explore.md predict.md stats.md timeseries.md model.md feature.md; do
     [ -f "$MCP_HOME/commands/$file" ] && cp "$MCP_HOME/commands/$file" "$PROJECT_DIR/.claude/commands/$file"
 done
-[ -f "$MCP_HOME/agents/databricks-analyst.md" ] && cp "$MCP_HOME/agents/databricks-analyst.md" "$PROJECT_DIR/.claude/agents/"
-echo "✅ Skills e agent copiados para .claude/"
+for file in databricks-analyst.md data-scientist.md; do
+    [ -f "$MCP_HOME/agents/$file" ] && cp "$MCP_HOME/agents/$file" "$PROJECT_DIR/.claude/agents/"
+done
+echo "✅ Skills e agents copiados para .claude/"
 if [ ! -f "$PROJECT_DIR/.env" ]; then
     echo ""
     echo "⚠️  Crie o .env com suas credenciais:"

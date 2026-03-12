@@ -2,7 +2,7 @@
 
 **Conecte o Claude Code ao seu workspace Databricks e transforme linguagem natural em queries, análises e notebooks, sem sair do terminal.**
 
-O Databricks MCP Toolkit é um pacote completo de integração entre o [Claude Code](https://docs.anthropic.com/en/docs/claude-code) e o Databricks. Ele inclui um MCP Server com 9 ferramentas, um agente especializado em dados e 4 skills (slash commands) prontos para uso imediato.
+O Databricks MCP Toolkit é um pacote completo de integração entre o [Claude Code](https://docs.anthropic.com/en/docs/claude-code) e o Databricks. Ele inclui um MCP Server com 18 ferramentas, 2 agentes especializados (dados e ciência de dados) e 9 skills (slash commands) prontos para uso imediato.
 
 ---
 
@@ -20,7 +20,7 @@ Analistas e engenheiros de dados passam boa parte do dia alternando entre termin
 
 ## Agentes disponíveis
 
-O toolkit inclui um agente especializado que é acionado automaticamente pelo Claude Code para tarefas complexas de análise de dados.
+O toolkit inclui dois agentes especializados, acionados automaticamente pelo Claude Code conforme o tipo de tarefa.
 
 ### `databricks-analyst`
 
@@ -28,7 +28,7 @@ O toolkit inclui um agente especializado que é acionado automaticamente pelo Cl
 |---|---|
 | **Modelo** | Sonnet |
 | **Perfil** | Engenheiro de Dados e Analista sênior |
-| **Ferramentas** | Todas as 9 ferramentas MCP do Databricks + Read, Write, Edit, Bash, Glob, Grep |
+| **Ferramentas** | 9 ferramentas MCP de dados + Read, Write, Edit, Bash, Glob, Grep |
 
 **Capacidades:**
 
@@ -49,6 +49,34 @@ O agente entra em ação quando você pede coisas como:
 **Fluxo de análise estruturado:**
 
 O agente segue uma metodologia consistente: `describe_table` (entender colunas e tipos) → `table_stats` (visão geral de nulos e cardinalidade) → `sample_table` (ver dados reais) → `run_sql` (queries específicas de análise).
+
+---
+
+### `data-scientist`
+
+| Atributo | Detalhe |
+|---|---|
+| **Modelo** | Sonnet |
+| **Perfil** | Cientista de Dados sênior / ML Engineer |
+| **Ferramentas** | Todas as 18 ferramentas MCP (dados + MLflow) + Read, Write, Edit, Bash, Glob, Grep |
+
+**Capacidades:**
+
+1. **ML Lifecycle**: explorar experimentos, runs, modelos e serving endpoints via MLflow
+2. **Análise estatística avançada**: correlação, distribuições, testes de hipótese via SQL
+3. **Feature engineering**: encoding, scaling, window features, lag features
+4. **Pipelines preditivos**: classificação, regressão, AutoML com logging no MLflow
+5. **Séries temporais**: tendência, sazonalidade, forecasting
+6. **Avaliação de modelos**: métricas, comparação de runs, análise de convergência
+7. **Analytics avançado**: clustering, anomalias, segmentação, cohort analysis
+
+**Quando é acionado:**
+
+O agente entra em ação quando você pede coisas como:
+- "compara os últimos runs do experimento X"
+- "cria um modelo preditivo para churn"
+- "analisa a série temporal de vendas"
+- "faz feature engineering na tabela Y"
 
 ---
 
@@ -125,9 +153,72 @@ Navegação progressiva pelo Unity Catalog, do nível mais alto até o detalhe d
 
 ---
 
+### `/predict` - Pipeline ML completo
+
+Gera um notebook Databricks com pipeline de Machine Learning completo.
+
+```
+/predict classificar churn na tabela gold.clientes.features
+```
+
+**O notebook gerado inclui:** EDA, feature engineering, split treino/teste, treinamento com logging no MLflow, avaliação de métricas e registro do modelo.
+
+---
+
+### `/stats` - Análise estatística avançada
+
+Executa testes estatísticos e análises avançadas usando funções SQL nativas do Databricks.
+
+```
+/stats correlação entre preço e volume na tabela silver.mercado.acoes
+```
+
+**Análises disponíveis:** estatísticas descritivas avançadas (skewness, kurtosis), correlação, detecção de outliers (IQR), distribuição de frequência, teste de normalidade aproximado.
+
+---
+
+### `/timeseries` - Séries temporais
+
+Analisa séries temporais e gera notebooks de forecasting.
+
+```
+/timeseries tendência do IPCA em silver.ibge.ipca_mensal
+```
+
+**O que faz:** identifica tendência, sazonalidade, anomalias temporais, variação período a período, e opcionalmente gera um notebook de forecasting com Prophet ou ARIMA.
+
+---
+
+### `/model` - Gerenciar MLflow
+
+Inspeciona experimentos, runs, modelos registrados e serving endpoints do MLflow.
+
+```
+/model list experiments
+/model runs 123456
+/model compare run_id1,run_id2
+/model endpoints
+```
+
+---
+
+### `/feature` - Feature engineering
+
+Analisa features de uma tabela e gera pipelines de feature engineering.
+
+```
+/feature gold.clientes.transacoes target=churn
+```
+
+**O que faz:** classifica features por tipo, analisa correlação com target, recomenda transformações (encoding, scaling, window features) e opcionalmente gera um notebook com o pipeline completo.
+
+---
+
 ## Ferramentas MCP
 
-O MCP Server roda localmente e expõe 9 ferramentas que o Claude Code chama diretamente via o protocolo [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) por `stdio`. O servidor é iniciado automaticamente ao abrir o projeto, conforme configurado no `.mcp.json`.
+O MCP Server roda localmente e expõe 18 ferramentas que o Claude Code chama diretamente via o protocolo [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) por `stdio`. O servidor é iniciado automaticamente ao abrir o projeto, conforme configurado no `.mcp.json`.
+
+### Dados e SQL
 
 | Ferramenta | Descrição | Exemplo de uso |
 |---|---|---|
@@ -141,7 +232,21 @@ O MCP Server roda localmente e expõe 9 ferramentas que o Claude Code chama dire
 | `list_warehouses` | Lista SQL Warehouses e seus estados | Verificar warehouse disponível |
 | `query_history` | Histórico de queries recentes no workspace | Auditoria e debug |
 
-**Como funciona a conexão:** o servidor se conecta ao Databricks usando as credenciais do `.env` e seleciona automaticamente um SQL Warehouse em estado `RUNNING`. O client e o warehouse são cacheados para evitar reconexões desnecessárias.
+### MLflow e Model Registry
+
+| Ferramenta | Descrição | Exemplo de uso |
+|---|---|---|
+| `list_experiments` | Lista experimentos MLflow no workspace | Descobrir experimentos disponíveis |
+| `get_experiment_runs` | Lista runs de um experimento com métricas e parâmetros | `get_experiment_runs("123456")` |
+| `get_run_details` | Detalhes completos de um run (params, métricas, tags, artifacts) | `get_run_details("run_id")` |
+| `compare_runs` | Compara múltiplos runs lado a lado | `compare_runs("run1,run2,run3")` |
+| `get_metric_history` | Histórico de uma métrica ao longo dos steps | `get_metric_history("run_id", "loss")` |
+| `list_registered_models` | Lista modelos no Unity Catalog Model Registry | Descobrir modelos registrados |
+| `get_model_versions` | Lista versões de um modelo registrado | `get_model_versions("catalog.schema.model")` |
+| `list_serving_endpoints` | Lista model serving endpoints | Verificar endpoints ativos |
+| `get_serving_endpoint` | Detalhes de um serving endpoint específico | `get_serving_endpoint("my-endpoint")` |
+
+**Como funciona a conexão:** o servidor se conecta ao Databricks usando as credenciais do `.env` e seleciona automaticamente um SQL Warehouse em estado `RUNNING`. O client e o warehouse são cacheados para evitar reconexões desnecessárias. As ferramentas de MLflow e Model Registry usam o mesmo `WorkspaceClient` — sem dependências adicionais.
 
 ---
 
@@ -213,16 +318,19 @@ O toolkit é composto por 3 camadas que trabalham juntas:
 ```mermaid
 flowchart TD
   subgraph claude ["Claude Code"]
-    skills["/sql · /analyze · /explore · /notebook"]
-    agent["Agent: databricks-analyst"]
+    skills_data["/sql · /analyze · /explore · /notebook"]
+    skills_ds["/predict · /stats · /timeseries · /model · /feature"]
+    agent_analyst["Agent: databricks-analyst"]
+    agent_ds["Agent: data-scientist"]
   end
 
-  subgraph mcp ["MCP Server — plugin"]
-    tools["run_sql · list_catalogs · list_schemas\nlist_tables · describe_table · sample_table\ntable_stats · list_warehouses · query_history"]
+  subgraph mcp ["MCP Server — 18 ferramentas"]
+    tools_data["run_sql · list_catalogs · list_schemas\nlist_tables · describe_table · sample_table\ntable_stats · list_warehouses · query_history"]
+    tools_ml["list_experiments · get_experiment_runs\nget_run_details · compare_runs · get_metric_history\nlist_registered_models · get_model_versions\nlist_serving_endpoints · get_serving_endpoint"]
   end
 
   subgraph databricks ["Databricks Workspace"]
-    apis["APIs REST · SQL Warehouses · Unity Catalog"]
+    apis["APIs REST · SQL Warehouses · Unity Catalog\nMLflow · Model Registry · Serving Endpoints"]
   end
 
   claude -- "chamadas de ferramentas" --> mcp
@@ -235,16 +343,22 @@ flowchart TD
 
 ```
 ~/.local/share/databricks-mcp/
-├── server.py                     ← MCP Server
+├── server.py                     ← MCP Server (18 ferramentas)
 ├── .venv/                        ← Python + dependências
 ├── setup.sh                      ← Script de setup por projeto
 ├── commands/                     ← Templates das skills
 │   ├── sql.md
 │   ├── analyze.md
 │   ├── notebook.md
-│   └── explore.md
+│   ├── explore.md
+│   ├── predict.md
+│   ├── stats.md
+│   ├── timeseries.md
+│   ├── model.md
+│   └── feature.md
 └── agents/
-    └── databricks-analyst.md
+    ├── databricks-analyst.md
+    └── data-scientist.md
 ```
 
 **Por projeto** (gerado pelo `databricks-mcp-init`):
@@ -258,9 +372,15 @@ flowchart TD
     │   ├── sql.md
     │   ├── analyze.md
     │   ├── notebook.md
-    │   └── explore.md
+    │   ├── explore.md
+    │   ├── predict.md
+    │   ├── stats.md
+    │   ├── timeseries.md
+    │   ├── model.md
+    │   └── feature.md
     └── agents/
-        └── databricks-analyst.md
+        ├── databricks-analyst.md
+        └── data-scientist.md
 ```
 
 ---

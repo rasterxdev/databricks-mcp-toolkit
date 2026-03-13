@@ -278,7 +278,7 @@ Alternativa para quem quer customizar ou contribuir:
 
 ```bash
 git clone git@github.com:rasterxdev/databricks-mcp-toolkit.git && cd databricks-mcp-toolkit
-./install.sh
+./scripts/install.sh
 ```
 
 ### O que o instalador faz
@@ -440,7 +440,7 @@ As credenciais são configuradas durante a instalação e salvas em `~/.local/sh
 | `DATABRICKS_TOKEN` | Sim | Token de acesso pessoal (PAT) |
 | `DATABRICKS_WAREHOUSE_ID` | Não | ID do SQL Warehouse. Se omitido, usa o primeiro em estado `RUNNING` |
 
-Para reconfigurar credenciais, rode `./install.sh` novamente — o instalador detecta credenciais existentes e oferece a opção de mantê-las ou substituí-las.
+Para reconfigurar credenciais, rode `./scripts/install.sh` novamente — o instalador detecta credenciais existentes e oferece a opção de mantê-las ou substituí-las.
 
 ### Adicionar novas ferramentas ao MCP Server
 
@@ -459,7 +459,7 @@ def minha_ferramenta(parametro: str) -> str:
     return "resultado"
 ```
 
-Após editar, rode `./install.sh` novamente para atualizar a instalação global.
+Após editar, rode `./scripts/install.sh` novamente para atualizar a instalação global.
 
 ### Adicionar novas skills
 
@@ -476,7 +476,7 @@ Instruções para o Claude sobre o que fazer.
 $ARGUMENTS
 ```
 
-A skill fica disponível imediatamente como `/nome-do-arquivo`. Rode `./install.sh` para atualizar os templates globais.
+A skill fica disponível imediatamente como `/nome-do-arquivo`. Rode `./scripts/install.sh` para atualizar os templates globais.
 
 ---
 
@@ -506,7 +506,7 @@ A skill fica disponível imediatamente como `/nome-do-arquivo`. Rode `./install.
 | `databricks_mcp/server.py` | `~/.local/share/databricks-mcp/` (instalação + credenciais) |
 | `.claude/commands/*.md` | `~/.claude/` (modo global: agentes, skills, MCP config) |
 | `.claude/agents/*.md` | `.env` (override de credenciais por projeto) |
-| `install.sh` | `.claude/settings.local.json` (permissões locais) |
+| `scripts/install.sh` | `.claude/settings.local.json` (permissões locais) |
 | `CLAUDE.md`, `README.md` | |
 
 ---
@@ -517,12 +517,12 @@ O projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/) e usa
 
 ### Criando uma release
 
-Use o script `release.sh` na raiz do repositório:
+Use o script `scripts/release.sh`:
 
 ```bash
-./release.sh patch   # 0.1.0 → 0.1.1  (correções)
-./release.sh minor   # 0.1.0 → 0.2.0  (novas funcionalidades)
-./release.sh major   # 0.1.0 → 1.0.0  (breaking changes)
+./scripts/release.sh patch   # 0.1.0 → 0.1.1  (correções)
+./scripts/release.sh minor   # 0.1.0 → 0.2.0  (novas funcionalidades)
+./scripts/release.sh major   # 0.1.0 → 1.0.0  (breaking changes)
 ```
 
 O script automatiza todo o processo:
@@ -535,7 +535,7 @@ O script automatiza todo o processo:
 Após o merge do PR, publique a release:
 
 ```bash
-./post-release.sh vX.Y.Z
+./scripts/post-release.sh vX.Y.Z
 ```
 
 Isso faz push da tag, cria a GitHub Release com as notas do changelog e limpa o branch de release.

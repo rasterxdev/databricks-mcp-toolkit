@@ -5,7 +5,7 @@
 # Rode após o merge do PR de release no main.
 #
 # Uso:
-#   ./post-release.sh v0.2.0
+#   ./scripts/post-release.sh v0.2.0
 #
 # O que faz:
 #   1. Volta para main e puxa as alterações do merge
@@ -29,7 +29,7 @@ warn()  { echo -e "${YELLOW}[warn]${NC}  $*"; }
 fatal() { echo -e "${RED}[erro]${NC}  $*" >&2; exit 1; }
 
 # --- Constantes ---
-REPO_ROOT="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CHANGELOG_FILE="$REPO_ROOT/CHANGELOG.md"
 
 # =============================================================================

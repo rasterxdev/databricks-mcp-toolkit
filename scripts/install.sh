@@ -11,7 +11,7 @@ set -e
 MCP_HOME="$HOME/.local/share/databricks-mcp"
 CLAUDE_GLOBAL="$HOME/.claude"
 CFG_FILE="$MCP_HOME/.databricks_mcp_cfg"
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo ""
 echo "══════════════════════════════════════════════════════════"

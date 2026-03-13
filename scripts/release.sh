@@ -3,9 +3,9 @@
 # release.sh — Script de automação de releases para o Databricks MCP Toolkit
 #
 # Uso:
-#   ./release.sh patch   # 0.1.0 → 0.1.1
-#   ./release.sh minor   # 0.1.0 → 0.2.0
-#   ./release.sh major   # 0.1.0 → 1.0.0
+#   ./scripts/release.sh patch   # 0.1.0 → 0.1.1
+#   ./scripts/release.sh minor   # 0.1.0 → 0.2.0
+#   ./scripts/release.sh major   # 0.1.0 → 1.0.0
 #
 # O que faz:
 #   1. Incrementa a versão no arquivo VERSION
@@ -31,7 +31,7 @@ error() { echo -e "${RED}[erro]${NC}  $*" >&2; }
 fatal() { error "$*"; exit 1; }
 
 # --- Constantes ---
-REPO_ROOT="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION_FILE="$REPO_ROOT/VERSION"
 CHANGELOG_FILE="$REPO_ROOT/CHANGELOG.md"
 GITHUB_REPO="rasterxdev/databricks-mcp-toolkit"
@@ -369,5 +369,5 @@ echo ""
 echo "  1. Revise o PR e faça merge no main"
 echo ""
 echo "  2. Após o merge, publique a release:"
-echo -e "     ${YELLOW}./post-release.sh ${TAG_NAME}${NC}"
+echo -e "     ${YELLOW}./scripts/post-release.sh ${TAG_NAME}${NC}"
 echo ""

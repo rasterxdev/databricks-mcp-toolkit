@@ -511,6 +511,37 @@ A skill fica disponível imediatamente como `/nome-do-arquivo`. Rode `./install.
 
 ---
 
+## Versionamento e Releases
+
+O projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/) e usa [Conventional Commits](https://www.conventionalcommits.org/) para mensagens de commit (`feat:`, `fix:`, `docs:`).
+
+### Criando uma release
+
+Use o script `release.sh` na raiz do repositório:
+
+```bash
+./release.sh patch   # 0.1.0 → 0.1.1  (correções)
+./release.sh minor   # 0.1.0 → 0.2.0  (novas funcionalidades)
+./release.sh major   # 0.1.0 → 1.0.0  (breaking changes)
+```
+
+O script automatiza todo o processo:
+
+1. Incrementa a versão no arquivo `VERSION`
+2. Gera o changelog a partir dos commits desde a última tag
+3. Cria um branch `release/vX.Y.Z` com o commit e tag anotada
+4. Abre um Pull Request no GitHub para revisão
+
+Após o merge do PR, faça push da tag:
+
+```bash
+git push origin vX.Y.Z
+```
+
+O changelog completo está em [CHANGELOG.md](CHANGELOG.md).
+
+---
+
 ## Troubleshooting
 
 | Problema | Solução |

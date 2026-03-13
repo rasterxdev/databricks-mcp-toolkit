@@ -5,6 +5,25 @@ Todas as alterações relevantes deste projeto são documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [0.1.1] - 2026-03-13
+
+### Correções
+
+- fix: corrige perfil do databricks-analyst para Analista de Dados
+- fix: corrige leitura de credenciais no curl | bash
+
+### Outros
+
+- Merge pull request #4 from rasterxdev/develop
+- Merge pull request #3 from rasterxdev/develop
+
+**Diff completo:** [v0.1.0...v0.1.1](https://github.com/rasterxdev/databricks-mcp-toolkit/compare/v0.1.0...v0.1.1)
+
+Todas as alterações relevantes deste projeto são documentadas neste arquivo.
+
+O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
+e este projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
+
 ## [0.1.0] - 2026-03-13
 
 Release inicial do Databricks MCP Toolkit.

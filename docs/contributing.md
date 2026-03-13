@@ -33,26 +33,44 @@
 
 ---
 
-## Versionamento e Releases
+## Fluxo de trabalho
 
 O projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/) e usa [Conventional Commits](https://www.conventionalcommits.org/) para mensagens de commit (`feat:`, `fix:`, `docs:`).
 
-### Criando uma release
+### Branches
+
+| Branch | Propósito | Recebe commits diretos? |
+|---|---|---|
+| `main` | Branch protegida, sempre estável | **Não** — só via PR |
+| `develop` | Desenvolvimento ativo | Sim |
+| `feat/<nome>` | Features grandes (opcional) | Sim |
+| `release/vX.Y.Z` | Gerado pelo script de release | Não (automático) |
+
+### Desenvolvimento
 
 ```bash
+git checkout develop                    # usar branch de desenvolvimento
+# ... fazer alterações e commits ...
+git push -u origin develop
+gh pr create --base main --head develop  # abrir PR para main
+```
+
+Após revisão, mergear o PR no GitHub.
+
+### Criando uma release
+
+Após o merge na main:
+
+```bash
+git checkout main && git pull
 ./scripts/release.sh patch   # 0.1.0 → 0.1.1  (correções)
 ./scripts/release.sh minor   # 0.1.0 → 0.2.0  (novas funcionalidades)
 ./scripts/release.sh major   # 0.1.0 → 1.0.0  (breaking changes)
 ```
 
-O script automatiza todo o processo:
+O script automatiza: bump de versão, changelog, commit, tag e PR.
 
-1. Incrementa a versão no arquivo `VERSION`
-2. Gera o changelog a partir dos commits desde a última tag
-3. Cria um branch `release/vX.Y.Z` com o commit e tag anotada
-4. Abre um Pull Request no GitHub para revisão
-
-Após o merge do PR, publique a release:
+Após o merge do PR de release, publique:
 
 ```bash
 ./scripts/post-release.sh vX.Y.Z

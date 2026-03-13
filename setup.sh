@@ -143,7 +143,7 @@ if [ -f "$CFG_FILE" ]; then
     echo -e "  Credenciais existentes encontradas em:"
     echo -e "  ${DIM}$CFG_FILE${RESET}"
     echo ""
-    read -r -p "  Deseja manter as credenciais atuais? [S/n] " KEEP_CREDS
+    read -r -p "  Deseja manter as credenciais atuais? [S/n] " KEEP_CREDS < /dev/tty
     KEEP_CREDS=${KEEP_CREDS:-S}
     if [[ "$KEEP_CREDS" =~ ^[sS] ]]; then
         CONFIGURE_CREDS="n"
@@ -157,21 +157,21 @@ if [ "$CONFIGURE_CREDS" = "s" ]; then
     echo -e "  ${DIM}(Para gerar um token: Workspace → Settings → Developer → Access tokens)${RESET}"
     echo ""
 
-    read -r -p "  DATABRICKS_HOST (ex: https://dbc-xxx.cloud.databricks.com/): " DB_HOST
+    read -r -p "  DATABRICKS_HOST (ex: https://dbc-xxx.cloud.databricks.com): " DB_HOST < /dev/tty
     while [ -z "$DB_HOST" ]; do
         echo "  ❌ DATABRICKS_HOST é obrigatório."
-        read -r -p "  DATABRICKS_HOST: " DB_HOST
+        read -r -p "  DATABRICKS_HOST: " DB_HOST < /dev/tty
     done
 
-    read -r -s -p "  DATABRICKS_TOKEN (input oculto): " DB_TOKEN
+    read -r -s -p "  DATABRICKS_TOKEN (input oculto): " DB_TOKEN < /dev/tty
     echo ""
     while [ -z "$DB_TOKEN" ]; do
         echo "  ❌ DATABRICKS_TOKEN é obrigatório."
-        read -r -s -p "  DATABRICKS_TOKEN: " DB_TOKEN
+        read -r -s -p "  DATABRICKS_TOKEN: " DB_TOKEN < /dev/tty
         echo ""
     done
 
-    read -r -p "  DATABRICKS_WAREHOUSE_ID (opcional, Enter para auto-detectar): " DB_WAREHOUSE
+    read -r -p "  DATABRICKS_WAREHOUSE_ID (opcional, Enter para auto-detectar): " DB_WAREHOUSE < /dev/tty
 
     cat > "$CFG_FILE" << EOF
 DATABRICKS_HOST=$DB_HOST

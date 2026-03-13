@@ -80,18 +80,36 @@ Sempre incluir `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>` quando 
 
 ### Branches
 
-- `main` — branch principal, sempre estável
+- `main` — **protegida**, só recebe merges via PR. Nunca commitar direto.
+- `develop` — branch de desenvolvimento. Todo trabalho acontece aqui.
+- `feat/<nome>` — branches de feature, criados a partir de `develop` (opcional, para features grandes)
 - `release/vX.Y.Z` — branch temporário de release (criado pelo `scripts/release.sh`, removido pelo `scripts/post-release.sh`)
+
+### Fluxo de trabalho
+
+1. **Desenvolver:** sempre criar ou usar a branch `develop`. Nunca trabalhar direto na `main`.
+   ```
+   git checkout develop  # ou: git checkout -b develop (se não existir)
+   ```
+2. **Commitar:** fazer commits na `develop` seguindo Conventional Commits.
+3. **Subir PR:** quando pronto, fazer push da `develop` e abrir PR para `main`.
+   ```
+   git push -u origin develop
+   gh pr create --base main --head develop --title "descrição"
+   ```
+4. **Revisar e mergear:** merge do PR no GitHub.
+5. **Release:** após o merge na main, seguir o fluxo de release abaixo.
 
 ### Releases
 
 O projeto usa Versionamento Semântico (`MAJOR.MINOR.PATCH`). O fluxo é automatizado:
 
-1. **Preparar:** `./scripts/release.sh patch|minor|major` — bumpa VERSION, gera CHANGELOG.md, cria branch, commit, tag e PR
-2. **Revisar:** merge do PR no GitHub
+1. **Preparar:** checkout na `main` atualizada, rodar `./scripts/release.sh patch|minor|major`
+2. **Revisar:** merge do PR de release no GitHub
 3. **Publicar:** `./scripts/post-release.sh vX.Y.Z` — push da tag, cria GitHub Release, limpa branch
 
 **Nunca** fazer bump manual do `VERSION` ou editar `CHANGELOG.md` diretamente — sempre usar os scripts.
+**Nunca** commitar direto na `main` — sempre via PR.
 
 ### Estrutura do repositório
 

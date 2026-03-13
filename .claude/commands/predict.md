@@ -1,22 +1,22 @@
 ---
-description: Cria notebook com pipeline ML completo (EDA, features, treino, avaliacao, MLflow)
+description: Create a notebook with a complete ML pipeline (EDA, features, training, evaluation, MLflow)
 allowed-tools: mcp__databricks__run_sql, mcp__databricks__describe_table, mcp__databricks__sample_table, mcp__databricks__table_stats, mcp__databricks__list_tables, mcp__databricks__list_schemas, mcp__databricks__list_experiments, mcp__databricks__get_experiment_runs
 ---
 
-O usuario quer criar um pipeline de Machine Learning completo como notebook Databricks.
+The user wants to create a complete Machine Learning pipeline as a Databricks notebook.
 
-## Instrucoes
+## Instructions
 
-### 1. Entender o problema
-- Identifique a tabela de dados, a variavel alvo (target) e o tipo de problema (classificacao ou regressao)
-- Se o usuario nao especificou a tabela, pergunte
-- Use `describe_table` e `sample_table` para entender os dados
+### 1. Understand the problem
+- Identify the data table, target variable, and problem type (classification or regression)
+- If the user did not specify a table, ask for one
+- Use `describe_table` and `sample_table` to understand the data
 
-### 2. Gerar notebook com pipeline completo
+### 2. Generate a notebook with a complete pipeline
 
-Crie um arquivo `.py` no formato notebook Databricks com as seguintes celulas:
+Create a `.py` file in Databricks notebook format with the following cells:
 
-#### Celula 1: Setup e imports
+#### Cell 1: Setup and imports
 ```python
 # Databricks notebook source
 import mlflow
@@ -28,45 +28,45 @@ import pandas as pd
 import numpy as np
 ```
 
-#### Celula 2: Carregamento de dados
-- Leia a tabela com Spark
-- Mostre schema e contagem
+#### Cell 2: Data loading
+- Read the table with Spark
+- Display schema and row count
 
-#### Celula 3: EDA (Analise Exploratoria)
-- Estatisticas descritivas
-- Distribuicao da variavel alvo
-- Verificacao de nulos e balanceamento
+#### Cell 3: EDA (Exploratory Data Analysis)
+- Descriptive statistics
+- Target variable distribution
+- Null check and class balance assessment
 
-#### Celula 4: Feature Engineering
-- Tratamento de nulos
-- Encoding de categoricas
-- Scaling de numericas
-- Selecao de features
+#### Cell 4: Feature Engineering
+- Null handling
+- Categorical encoding
+- Numeric scaling
+- Feature selection
 
-#### Celula 5: Split treino/teste
-- Split estratificado (se classificacao)
-- Proporcao 80/20 ou temporal se dados tem componente de tempo
+#### Cell 5: Train/test split
+- Stratified split (for classification)
+- 80/20 ratio, or temporal split if data has a time component
 
-#### Celula 6: Treinamento com MLflow
-- Configurar experimento MLflow
-- Treinar modelo(s) com logging de parametros e metricas
-- Usar `mlflow.autolog()` ou logging manual
+#### Cell 6: Training with MLflow
+- Configure MLflow experiment
+- Train model(s) with parameter and metric logging
+- Use `mlflow.autolog()` or manual logging
 
-#### Celula 7: Avaliacao
-- Metricas no conjunto de teste
-- Matriz de confusao (classificacao) ou scatter plot (regressao)
+#### Cell 7: Evaluation
+- Metrics on the test set
+- Confusion matrix (classification) or scatter plot (regression)
 - Feature importance
 
-#### Celula 8: Registro do modelo (opcional)
-- Registrar no Unity Catalog Model Registry se o resultado for satisfatorio
+#### Cell 8: Model registration (optional)
+- Register in Unity Catalog Model Registry if results are satisfactory
 
-### 3. Formato do notebook
+### 3. Notebook format
 
-- Use `# COMMAND ----------` entre celulas
-- Use `# MAGIC %md` para celulas de documentacao
-- Documente cada etapa com markdown cells
-- Inclua `display()` para visualizacoes no Databricks
+- Use `# COMMAND ----------` between cells
+- Use `# MAGIC %md` for documentation cells
+- Document each step with markdown cells
+- Include `display()` for visualizations in Databricks
 
-## Entrada do usuario
+## User input
 
 $ARGUMENTS

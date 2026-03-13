@@ -1,22 +1,22 @@
 ---
-description: Executa testes estatisticos e analises avancadas via SQL no Databricks
+description: Run statistical tests and advanced analyses via SQL on Databricks
 allowed-tools: mcp__databricks__run_sql, mcp__databricks__describe_table, mcp__databricks__sample_table, mcp__databricks__table_stats, mcp__databricks__list_tables
 ---
 
-O usuario quer uma analise estatistica avancada de dados no Databricks.
+The user wants an advanced statistical analysis of data on Databricks.
 
-## Instrucoes
+## Instructions
 
-### 1. Entender os dados
-- Use `describe_table` para entender colunas e tipos
-- Use `table_stats` para visao geral
-- Identifique colunas numericas e categoricas relevantes
+### 1. Understand the data
+- Use `describe_table` to understand columns and types
+- Use `table_stats` for an overview
+- Identify relevant numeric and categorical columns
 
-### 2. Executar analises via SQL
+### 2. Run analyses via SQL
 
-Dependendo do pedido do usuario, execute uma ou mais das analises abaixo usando `run_sql`:
+Depending on the user's request, execute one or more of the following analyses using `run_sql`:
 
-#### Estatisticas descritivas avancadas
+#### Advanced descriptive statistics
 ```sql
 SELECT
   COUNT(*) as n,
@@ -33,14 +33,14 @@ SELECT
 FROM tabela
 ```
 
-#### Correlacao entre variaveis
+#### Correlation between variables
 ```sql
 SELECT
   CORR(col_a, col_b) as correlacao
 FROM tabela
 ```
 
-#### Deteccao de outliers (IQR)
+#### Outlier detection (IQR)
 ```sql
 WITH stats AS (
   SELECT
@@ -54,7 +54,7 @@ WHERE coluna < q1 - 1.5 * (q3 - q1)
    OR coluna > q3 + 1.5 * (q3 - q1)
 ```
 
-#### Distribuicao de frequencia
+#### Frequency distribution
 ```sql
 SELECT
   coluna,
@@ -65,17 +65,17 @@ GROUP BY coluna
 ORDER BY frequencia DESC
 ```
 
-#### Teste de normalidade aproximado
-- Use skewness e kurtosis para avaliar normalidade
-- Skewness proximo de 0 e kurtosis proximo de 3 indicam distribuicao normal
+#### Approximate normality test
+- Use skewness and kurtosis to assess normality
+- Skewness close to 0 and kurtosis close to 3 indicate a normal distribution
 
-### 3. Formato de saida
+### 3. Output format
 
-- Apresente resultados organizados com headers markdown
-- Interprete os resultados estatisticamente (o que significam os numeros)
-- Inclua recomendacoes baseadas nos achados
-- Se relevante, sugira proximos passos de analise
+- Present results organized with markdown headers
+- Interpret the results statistically (what the numbers mean)
+- Include recommendations based on findings
+- If relevant, suggest next analysis steps
 
-## Entrada do usuario
+## User input
 
 $ARGUMENTS

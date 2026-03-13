@@ -1,19 +1,19 @@
 ---
-description: Explora catálogos, schemas e tabelas do Unity Catalog
+description: Browse catalogs, schemas, and tables in Unity Catalog
 allowed-tools: mcp__databricks__list_catalogs, mcp__databricks__list_schemas, mcp__databricks__list_tables, mcp__databricks__describe_table
 ---
 
-O usuário quer explorar o Unity Catalog do Databricks.
+The user wants to explore the Databricks Unity Catalog.
 
-## Instruções
+## Instructions
 
-1. Se nenhum argumento foi fornecido, comece listando os catálogos com `list_catalogs`
-2. Se um catálogo foi especificado, liste os schemas dele com `list_schemas`
-3. Se catalog.schema foi especificado, liste as tabelas com `list_tables`
-4. Se uma tabela completa foi especificada, descreva-a com `describe_table`
+1. If no arguments were provided, start by listing catalogs with `list_catalogs`
+2. If a catalog was specified, list its schemas with `list_schemas`
+3. If catalog.schema was specified, list the tables with `list_tables`
+4. If a fully qualified table name was specified, describe it with `describe_table`
 
-Apresente os resultados formatados e sugira próximos passos de exploração.
+Present the results formatted and suggest next exploration steps.
 
-## Entrada do usuário
+## User input
 
 $ARGUMENTS

@@ -1,85 +1,149 @@
 """
-MCP Server para Databricks.
+MCP Server for Databricks.
 
-Fornece ferramentas para executar SQL, explorar catálogos,
-descrever tabelas e interagir com o workspace Databricks.
+Provides tools to execute SQL, explore catalogs,
+describe tables, and interact with the Databricks workspace.
 
-Uso:
+Usage:
     python databricks_mcp/server.py
 """
 
 import os
+import threading
+import urllib.request
 from datetime import datetime, timezone
-from functools import lru_cache
+from functools import lru_cache, wraps
 from textwrap import dedent
 
 from dotenv import load_dotenv
 from databricks.sdk import WorkspaceClient
 from mcp.server.fastmcp import FastMCP
 
-# Prioridade de credenciais:
-#   1. Variáveis de ambiente já definidas no sistema
-#   2. .env do projeto (cwd do Claude Code)
-#   3. .databricks_mcp_cfg global (~/.local/share/databricks-mcp/)
-#   4. Perfil CLI (~/.databrickscfg)
-load_dotenv()  # carrega .env do projeto (não sobrescreve env vars existentes)
-_cfg_path = os.path.join(
-    os.path.expanduser("~"), ".local", "share", "databricks-mcp", ".databricks_mcp_cfg"
-)
+# Credential priority:
+#   1. Environment variables already set in the system
+#   2. Project .env (Claude Code cwd)
+#   3. Global .databricks_mcp_cfg (~/.local/share/databricks-mcp/)
+#   4. CLI profile (~/.databrickscfg)
+load_dotenv()  # loads project .env (does not override existing env vars)
+_MCP_HOME = os.path.join(os.path.expanduser("~"), ".local", "share", "databricks-mcp")
+_cfg_path = os.path.join(_MCP_HOME, ".databricks_mcp_cfg")
 if os.path.isfile(_cfg_path):
-    load_dotenv(_cfg_path, override=False)  # preenche lacunas sem sobrescrever
+    load_dotenv(_cfg_path, override=False)  # fills gaps without overriding
 
-# ── Inicialização ────────────────────────────────────────────────────────────
+# -- Initialization -----------------------------------------------------------
 
 mcp = FastMCP(
     "Databricks",
     instructions=dedent("""
-        Servidor MCP para interação com Databricks.
-        Permite executar SQL, explorar catálogos/schemas/tabelas,
-        e gerenciar recursos do workspace.
+        MCP server for Databricks interaction.
+        Allows executing SQL, exploring catalogs/schemas/tables,
+        and managing workspace resources.
     """).strip(),
 )
 
 
+# -- Auto-update check -------------------------------------------------------
+
+_update_info: dict = {}
+_update_notice_shown = False
+
+
+def _check_for_updates():
+    """Check for available updates (background, silent)."""
+    try:
+        version_file = os.path.join(_MCP_HOME, ".version")
+        if not os.path.isfile(version_file):
+            return
+        with open(version_file) as f:
+            local_ver = f.read().strip()
+        url = "https://raw.githubusercontent.com/rasterxdev/databricks-mcp-toolkit/main/VERSION"
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            remote_ver = resp.read().decode().strip()
+        if remote_ver != local_ver:
+            _update_info["local"] = local_ver
+            _update_info["remote"] = remote_ver
+    except Exception:
+        pass
+
+
+threading.Thread(target=_check_for_updates, daemon=True).start()
+
+
+def _prepend_update_notice(result: str) -> str:
+    """Prepend an update notice to the first response of the session."""
+    global _update_notice_shown
+    if _update_notice_shown or not _update_info:
+        return result
+    _update_notice_shown = True
+    return (
+        f"> **Update available:** Databricks MCP Toolkit "
+        f"v{_update_info['local']} → v{_update_info['remote']}. "
+        f"Run `/databricks-update` to update.\n\n---\n\n"
+        + result
+    )
+
+
+# Wrap mcp.tool to inject update notice into the first response
+_original_tool = mcp.tool
+
+
+def _tool_with_update_notice(**kwargs):
+    original_decorator = _original_tool(**kwargs)
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kw):
+            return _prepend_update_notice(func(*args, **kw))
+        return original_decorator(wrapper)
+
+    return decorator
+
+
+mcp.tool = _tool_with_update_notice
+
+
+# -- Helpers ------------------------------------------------------------------
+
+
 @lru_cache(maxsize=1)
 def _get_client() -> WorkspaceClient:
-    """Cria um WorkspaceClient (cacheado) usando variáveis de ambiente ou ~/.databrickscfg."""
+    """Create a WorkspaceClient (cached) using environment variables or ~/.databrickscfg."""
     host = os.environ.get("DATABRICKS_HOST")
     token = os.environ.get("DATABRICKS_TOKEN")
     if host and token:
         return WorkspaceClient(host=host, token=token)
-    # fallback para perfil do CLI
+    # fallback to CLI profile
     return WorkspaceClient(profile="vscode_databricks")
 
 
 @lru_cache(maxsize=1)
 def _get_warehouse_id() -> str:
-    """Retorna o warehouse_id configurado ou o primeiro disponível (cacheado)."""
+    """Return the configured warehouse_id or the first available one (cached)."""
     wh_id = os.environ.get("DATABRICKS_WAREHOUSE_ID")
     if wh_id:
         return wh_id
     client = _get_client()
     warehouses = list(client.warehouses.list())
-    # prefere warehouse que já esteja RUNNING
+    # prefer a warehouse that is already RUNNING
     for wh in warehouses:
         if str(wh.state) == "State.RUNNING":
             return wh.id
-    # senão, retorna o primeiro (será iniciado sob demanda)
+    # otherwise, return the first one (will be started on demand)
     if warehouses:
         return warehouses[0].id
-    raise RuntimeError("Nenhum SQL Warehouse encontrado no workspace.")
+    raise RuntimeError("No SQL Warehouse found in the workspace.")
 
 
-# ── Ferramentas ──────────────────────────────────────────────────────────────
+# -- Tools --------------------------------------------------------------------
 
 
 @mcp.tool()
 def run_sql(query: str, max_rows: int = 100) -> str:
-    """Executa uma query SQL no Databricks e retorna os resultados.
+    """Execute a SQL query on Databricks and return the results.
 
     Args:
-        query: Query SQL a ser executada.
-        max_rows: Número máximo de linhas a retornar (padrão: 100).
+        query: SQL query to execute.
+        max_rows: Maximum number of rows to return (default: 100).
     """
     client = _get_client()
     wh_id = _get_warehouse_id()
@@ -93,15 +157,15 @@ def run_sql(query: str, max_rows: int = 100) -> str:
 
     status = result.status
     if status and status.error:
-        return f"ERRO: {status.error.message}"
+        return f"ERROR: {status.error.message}"
 
     if not result.manifest or not result.manifest.schema:
-        return "Query executada com sucesso (sem resultados)."
+        return "Query executed successfully (no results)."
 
     columns = [col.name for col in result.manifest.schema.columns]
     rows = result.result.data_array if result.result and result.result.data_array else []
 
-    # Formata como tabela markdown
+    # Format as markdown table
     lines = []
     lines.append("| " + " | ".join(columns) + " |")
     lines.append("| " + " | ".join("---" for _ in columns) + " |")
@@ -110,19 +174,19 @@ def run_sql(query: str, max_rows: int = 100) -> str:
 
     total = result.manifest.total_row_count
     if total and total > max_rows:
-        lines.append(f"\n*Mostrando {max_rows} de {total} linhas. Use max_rows para ver mais.*")
+        lines.append(f"\n*Showing {max_rows} of {total} rows. Use max_rows to see more.*")
 
     return "\n".join(lines)
 
 
 @mcp.tool()
 def list_catalogs() -> str:
-    """Lista todos os catálogos disponíveis no Unity Catalog."""
+    """List all available catalogs in Unity Catalog."""
     client = _get_client()
     catalogs = list(client.catalogs.list())
     if not catalogs:
-        return "Nenhum catálogo encontrado."
-    lines = ["| Catálogo | Tipo | Comentário |", "| --- | --- | --- |"]
+        return "No catalogs found."
+    lines = ["| Catalog | Type | Comment |", "| --- | --- | --- |"]
     for cat in catalogs:
         comment = (cat.comment or "")[:80]
         cat_type = str(cat.catalog_type) if cat.catalog_type else "-"
@@ -132,16 +196,16 @@ def list_catalogs() -> str:
 
 @mcp.tool()
 def list_schemas(catalog: str) -> str:
-    """Lista todos os schemas de um catálogo.
+    """List all schemas in a catalog.
 
     Args:
-        catalog: Nome do catálogo.
+        catalog: Catalog name.
     """
     client = _get_client()
     schemas = list(client.schemas.list(catalog_name=catalog))
     if not schemas:
-        return f"Nenhum schema encontrado no catálogo '{catalog}'."
-    lines = ["| Schema | Comentário |", "| --- | --- |"]
+        return f"No schemas found in catalog '{catalog}'."
+    lines = ["| Schema | Comment |", "| --- | --- |"]
     for s in schemas:
         comment = (s.comment or "")[:80]
         lines.append(f"| {s.name} | {comment} |")
@@ -150,17 +214,17 @@ def list_schemas(catalog: str) -> str:
 
 @mcp.tool()
 def list_tables(catalog: str, schema: str) -> str:
-    """Lista todas as tabelas de um schema.
+    """List all tables in a schema.
 
     Args:
-        catalog: Nome do catálogo.
-        schema: Nome do schema.
+        catalog: Catalog name.
+        schema: Schema name.
     """
     client = _get_client()
     tables = list(client.tables.list(catalog_name=catalog, schema_name=schema))
     if not tables:
-        return f"Nenhuma tabela encontrada em '{catalog}.{schema}'."
-    lines = ["| Tabela | Tipo | Comentário |", "| --- | --- | --- |"]
+        return f"No tables found in '{catalog}.{schema}'."
+    lines = ["| Table | Type | Comment |", "| --- | --- | --- |"]
     for t in tables:
         ttype = str(t.table_type).split(".")[-1] if t.table_type else "-"
         comment = (t.comment or "")[:80]
@@ -170,10 +234,10 @@ def list_tables(catalog: str, schema: str) -> str:
 
 @mcp.tool()
 def describe_table(full_table_name: str) -> str:
-    """Retorna o schema detalhado de uma tabela (colunas, tipos, comentários).
+    """Return the detailed schema of a table (columns, types, comments).
 
     Args:
-        full_table_name: Nome completo da tabela (catalog.schema.table).
+        full_table_name: Fully qualified table name (catalog.schema.table).
     """
     client = _get_client()
     table = client.tables.get(full_name=full_table_name)
@@ -181,21 +245,21 @@ def describe_table(full_table_name: str) -> str:
     lines = [f"## {table.full_name}\n"]
 
     if table.comment:
-        lines.append(f"**Descrição:** {table.comment}\n")
+        lines.append(f"**Description:** {table.comment}\n")
 
     ttype = str(table.table_type).split(".")[-1] if table.table_type else "-"
-    lines.append(f"**Tipo:** {ttype}")
+    lines.append(f"**Type:** {ttype}")
 
     if table.storage_location:
         lines.append(f"**Storage:** {table.storage_location}")
 
     lines.append("")
-    lines.append("| Coluna | Tipo | Nullable | Comentário |")
+    lines.append("| Column | Type | Nullable | Comment |")
     lines.append("| --- | --- | --- | --- |")
 
     if table.columns:
         for col in table.columns:
-            nullable = "Sim" if col.nullable else "Não"
+            nullable = "Yes" if col.nullable else "No"
             comment = (col.comment or "")[:60]
             lines.append(f"| {col.name} | {col.type_name} | {nullable} | {comment} |")
 
@@ -204,11 +268,11 @@ def describe_table(full_table_name: str) -> str:
 
 @mcp.tool()
 def sample_table(full_table_name: str, rows: int = 10) -> str:
-    """Retorna uma amostra de dados de uma tabela.
+    """Return a sample of data from a table.
 
     Args:
-        full_table_name: Nome completo da tabela (catalog.schema.table).
-        rows: Número de linhas a retornar (padrão: 10).
+        full_table_name: Fully qualified table name (catalog.schema.table).
+        rows: Number of rows to return (default: 10).
     """
     query = f"SELECT * FROM `{full_table_name.replace('.', '`.`')}` LIMIT {rows}"
     return run_sql(query, max_rows=rows)
@@ -216,25 +280,25 @@ def sample_table(full_table_name: str, rows: int = 10) -> str:
 
 @mcp.tool()
 def table_stats(full_table_name: str) -> str:
-    """Retorna estatísticas básicas de uma tabela (contagem, nulos, distinct).
+    """Return basic statistics for a table (count, nulls, distinct).
 
     Args:
-        full_table_name: Nome completo da tabela (catalog.schema.table).
+        full_table_name: Fully qualified table name (catalog.schema.table).
     """
     client = _get_client()
     table = client.tables.get(full_name=full_table_name)
 
     if not table.columns:
-        return "Tabela sem colunas definidas."
+        return "Table has no defined columns."
 
     escaped = f"`{full_table_name.replace('.', '`.`')}`"
 
-    # Conta total de linhas
+    # Count total rows
     count_result = run_sql(f"SELECT COUNT(*) as total FROM {escaped}", max_rows=1)
 
-    # Monta query de stats por coluna
+    # Build per-column stats query
     col_stats = []
-    for col in table.columns[:20]:  # limita a 20 colunas para não estourar
+    for col in table.columns[:20]:  # limit to 20 columns to avoid overflow
         name = col.name
         col_stats.append(
             f"COUNT(DISTINCT `{name}`) as `{name}_distinct`, "
@@ -244,17 +308,17 @@ def table_stats(full_table_name: str) -> str:
     stats_query = f"SELECT {', '.join(col_stats)} FROM {escaped}"
     stats_result = run_sql(stats_query, max_rows=1)
 
-    return f"### Contagem\n{count_result}\n\n### Estatísticas por coluna\n{stats_result}"
+    return f"### Row Count\n{count_result}\n\n### Per-Column Statistics\n{stats_result}"
 
 
 @mcp.tool()
 def list_warehouses() -> str:
-    """Lista todos os SQL Warehouses disponíveis no workspace."""
+    """List all available SQL Warehouses in the workspace."""
     client = _get_client()
     warehouses = list(client.warehouses.list())
     if not warehouses:
-        return "Nenhum SQL Warehouse encontrado."
-    lines = ["| ID | Nome | Estado | Tipo |", "| --- | --- | --- | --- |"]
+        return "No SQL Warehouses found."
+    lines = ["| ID | Name | State | Type |", "| --- | --- | --- | --- |"]
     for wh in warehouses:
         state = str(wh.state).split(".")[-1] if wh.state else "-"
         wh_type = str(wh.warehouse_type).split(".")[-1] if wh.warehouse_type else "-"
@@ -264,17 +328,17 @@ def list_warehouses() -> str:
 
 @mcp.tool()
 def query_history(max_results: int = 10) -> str:
-    """Lista as queries recentes executadas no workspace.
+    """List recent queries executed in the workspace.
 
     Args:
-        max_results: Número máximo de queries a retornar (padrão: 10).
+        max_results: Maximum number of queries to return (default: 10).
     """
     client = _get_client()
     from databricks.sdk.service.sql import ListQueryHistoryRequest
 
     history = client.query_history.list(request=ListQueryHistoryRequest())
 
-    lines = ["| Query ID | Status | Duração (ms) | Warehouse |", "| --- | --- | --- | --- |"]
+    lines = ["| Query ID | Status | Duration (ms) | Warehouse |", "| --- | --- | --- | --- |"]
     count = 0
     for q in history:
         if count >= max_results:
@@ -287,23 +351,23 @@ def query_history(max_results: int = 10) -> str:
     return "\n".join(lines)
 
 
-# ── MLflow & Model Registry ──────────────────────────────────────────────────
+# -- MLflow & Model Registry -------------------------------------------------
 
 
 @mcp.tool()
 def list_experiments(max_results: int = 20) -> str:
-    """Lista experimentos MLflow no workspace.
+    """List MLflow experiments in the workspace.
 
     Args:
-        max_results: Número máximo de experimentos a retornar (padrão: 20).
+        max_results: Maximum number of experiments to return (default: 20).
     """
     client = _get_client()
     experiments = list(client.experiments.list_experiments())
 
     if not experiments:
-        return "Nenhum experimento encontrado."
+        return "No experiments found."
 
-    lines = ["| ID | Nome | Lifecycle |", "| --- | --- | --- |"]
+    lines = ["| ID | Name | Lifecycle |", "| --- | --- | --- |"]
     count = 0
     for exp in experiments:
         if count >= max_results:
@@ -317,11 +381,11 @@ def list_experiments(max_results: int = 20) -> str:
 
 @mcp.tool()
 def get_experiment_runs(experiment_id: str, max_results: int = 20) -> str:
-    """Lista runs de um experimento MLflow com métricas e parâmetros.
+    """List runs of an MLflow experiment with metrics and parameters.
 
     Args:
-        experiment_id: ID do experimento MLflow.
-        max_results: Número máximo de runs a retornar (padrão: 20).
+        experiment_id: MLflow experiment ID.
+        max_results: Maximum number of runs to return (default: 20).
     """
     client = _get_client()
     response = client.experiments.search_runs(
@@ -331,9 +395,9 @@ def get_experiment_runs(experiment_id: str, max_results: int = 20) -> str:
 
     runs = response.runs if response.runs else []
     if not runs:
-        return f"Nenhum run encontrado para o experimento '{experiment_id}'."
+        return f"No runs found for experiment '{experiment_id}'."
 
-    lines = ["| Run ID | Status | Start Time | Métricas | Parâmetros |",
+    lines = ["| Run ID | Status | Start Time | Metrics | Parameters |",
              "| --- | --- | --- | --- | --- |"]
 
     for run in runs:
@@ -364,16 +428,16 @@ def get_experiment_runs(experiment_id: str, max_results: int = 20) -> str:
 
 @mcp.tool()
 def get_run_details(run_id: str) -> str:
-    """Detalhes completos de um run MLflow (parâmetros, métricas, tags, artifacts).
+    """Full details of an MLflow run (parameters, metrics, tags, artifacts).
 
     Args:
-        run_id: ID do run MLflow.
+        run_id: MLflow run ID.
     """
     client = _get_client()
     run = client.experiments.get_run(run_id=run_id)
 
     if not run.run:
-        return f"Run '{run_id}' não encontrado."
+        return f"Run '{run_id}' not found."
 
     info = run.run.info
     data = run.run.data
@@ -387,33 +451,33 @@ def get_run_details(run_id: str) -> str:
         start = datetime.fromtimestamp(
             info.start_time / 1000, tz=timezone.utc
         ).strftime("%Y-%m-%d %H:%M:%S UTC")
-        lines.append(f"**Início:** {start}")
+        lines.append(f"**Start:** {start}")
 
     if info.end_time:
         end = datetime.fromtimestamp(
             info.end_time / 1000, tz=timezone.utc
         ).strftime("%Y-%m-%d %H:%M:%S UTC")
-        lines.append(f"**Fim:** {end}")
+        lines.append(f"**End:** {end}")
 
         if info.start_time:
             duration_s = (info.end_time - info.start_time) / 1000
-            lines.append(f"**Duração:** {duration_s:.1f}s")
+            lines.append(f"**Duration:** {duration_s:.1f}s")
 
     if info.artifact_uri:
         lines.append(f"**Artifacts:** {info.artifact_uri}")
 
-    # Parâmetros
+    # Parameters
     if data and data.params:
-        lines.append("\n### Parâmetros\n")
-        lines.append("| Parâmetro | Valor |")
+        lines.append("\n### Parameters\n")
+        lines.append("| Parameter | Value |")
         lines.append("| --- | --- |")
         for p in data.params:
             lines.append(f"| {p.key} | {p.value} |")
 
-    # Métricas
+    # Metrics
     if data and data.metrics:
-        lines.append("\n### Métricas\n")
-        lines.append("| Métrica | Valor |")
+        lines.append("\n### Metrics\n")
+        lines.append("| Metric | Value |")
         lines.append("| --- | --- |")
         for m in data.metrics:
             lines.append(f"| {m.key} | {m.value} |")
@@ -421,7 +485,7 @@ def get_run_details(run_id: str) -> str:
     # Tags
     if data and data.tags:
         lines.append("\n### Tags\n")
-        lines.append("| Tag | Valor |")
+        lines.append("| Tag | Value |")
         lines.append("| --- | --- |")
         for t in data.tags:
             if not t.key.startswith("mlflow."):
@@ -432,16 +496,16 @@ def get_run_details(run_id: str) -> str:
 
 @mcp.tool()
 def compare_runs(run_ids: str) -> str:
-    """Compara múltiplos runs MLflow lado a lado (métricas e parâmetros).
+    """Compare multiple MLflow runs side by side (metrics and parameters).
 
     Args:
-        run_ids: IDs dos runs separados por vírgula (ex: "run1,run2,run3").
+        run_ids: Run IDs separated by commas (e.g., "run1,run2,run3").
     """
     client = _get_client()
     ids = [r.strip() for r in run_ids.split(",") if r.strip()]
 
     if len(ids) < 2:
-        return "Forneça pelo menos 2 run IDs separados por vírgula."
+        return "Please provide at least 2 run IDs separated by commas."
 
     runs_data = []
     for rid in ids:
@@ -450,9 +514,9 @@ def compare_runs(run_ids: str) -> str:
             runs_data.append(run.run)
 
     if len(runs_data) < 2:
-        return "Não foi possível encontrar pelo menos 2 runs válidos."
+        return "Could not find at least 2 valid runs."
 
-    # Coletar todas as métricas e parâmetros
+    # Collect all metrics and parameters
     all_metrics = set()
     all_params = set()
     for r in runs_data:
@@ -464,10 +528,10 @@ def compare_runs(run_ids: str) -> str:
     run_labels = [r.info.run_id[:8] for r in runs_data]
     lines = []
 
-    # Tabela de métricas
+    # Metrics table
     if all_metrics:
-        lines.append("### Métricas\n")
-        header = "| Métrica | " + " | ".join(run_labels) + " |"
+        lines.append("### Metrics\n")
+        header = "| Metric | " + " | ".join(run_labels) + " |"
         sep = "| --- | " + " | ".join("---" for _ in run_labels) + " |"
         lines.append(header)
         lines.append(sep)
@@ -484,10 +548,10 @@ def compare_runs(run_ids: str) -> str:
                 values.append(val)
             lines.append(f"| {metric} | " + " | ".join(values) + " |")
 
-    # Tabela de parâmetros
+    # Parameters table
     if all_params:
-        lines.append("\n### Parâmetros\n")
-        header = "| Parâmetro | " + " | ".join(run_labels) + " |"
+        lines.append("\n### Parameters\n")
+        header = "| Parameter | " + " | ".join(run_labels) + " |"
         sep = "| --- | " + " | ".join("---" for _ in run_labels) + " |"
         lines.append(header)
         lines.append(sep)
@@ -509,21 +573,21 @@ def compare_runs(run_ids: str) -> str:
 
 @mcp.tool()
 def get_metric_history(run_id: str, metric_key: str) -> str:
-    """Histórico de uma métrica ao longo dos steps de treinamento.
+    """History of a metric across training steps.
 
     Args:
-        run_id: ID do run MLflow.
-        metric_key: Nome da métrica (ex: "loss", "accuracy").
+        run_id: MLflow run ID.
+        metric_key: Metric name (e.g., "loss", "accuracy").
     """
     client = _get_client()
     history = client.experiments.get_history(run_id=run_id, metric_key=metric_key)
 
     metrics = history.metrics if history.metrics else []
     if not metrics:
-        return f"Nenhum histórico encontrado para a métrica '{metric_key}' no run '{run_id}'."
+        return f"No history found for metric '{metric_key}' in run '{run_id}'."
 
-    lines = [f"### Histórico: {metric_key} (run {run_id[:8]})\n"]
-    lines.append("| Step | Valor | Timestamp |")
+    lines = [f"### History: {metric_key} (run {run_id[:8]})\n"]
+    lines.append("| Step | Value | Timestamp |")
     lines.append("| --- | --- | --- |")
 
     for m in metrics:
@@ -540,10 +604,10 @@ def get_metric_history(run_id: str, metric_key: str) -> str:
 
 @mcp.tool()
 def list_registered_models(max_results: int = 20) -> str:
-    """Lista modelos registrados no Unity Catalog Model Registry.
+    """List registered models in Unity Catalog Model Registry.
 
     Args:
-        max_results: Número máximo de modelos a retornar (padrão: 20).
+        max_results: Maximum number of models to return (default: 20).
     """
     client = _get_client()
 
@@ -554,9 +618,9 @@ def list_registered_models(max_results: int = 20) -> str:
             break
 
     if not models:
-        return "Nenhum modelo registrado encontrado."
+        return "No registered models found."
 
-    lines = ["| Nome | Descrição |", "| --- | --- |"]
+    lines = ["| Name | Description |", "| --- | --- |"]
     for m in models:
         desc = (m.description or "")[:80] if hasattr(m, "description") else ""
         name = m.name if hasattr(m, "name") else str(m)
@@ -567,10 +631,10 @@ def list_registered_models(max_results: int = 20) -> str:
 
 @mcp.tool()
 def get_model_versions(model_name: str) -> str:
-    """Lista versões de um modelo registrado no Unity Catalog.
+    """List versions of a registered model in Unity Catalog.
 
     Args:
-        model_name: Nome completo do modelo (catalog.schema.model).
+        model_name: Fully qualified model name (catalog.schema.model).
     """
     client = _get_client()
 
@@ -579,9 +643,9 @@ def get_model_versions(model_name: str) -> str:
         versions.append(v)
 
     if not versions:
-        return f"Nenhuma versão encontrada para o modelo '{model_name}'."
+        return f"No versions found for model '{model_name}'."
 
-    lines = ["| Versão | Status | Criado em | Descrição |",
+    lines = ["| Version | Status | Created At | Description |",
              "| --- | --- | --- | --- |"]
 
     for v in versions:
@@ -600,14 +664,14 @@ def get_model_versions(model_name: str) -> str:
 
 @mcp.tool()
 def list_serving_endpoints() -> str:
-    """Lista model serving endpoints do workspace."""
+    """List model serving endpoints in the workspace."""
     client = _get_client()
     endpoints = list(client.serving_endpoints.list())
 
     if not endpoints:
-        return "Nenhum serving endpoint encontrado."
+        return "No serving endpoints found."
 
-    lines = ["| Nome | Estado | Criado em |",
+    lines = ["| Name | State | Created At |",
              "| --- | --- | --- |"]
 
     for ep in endpoints:
@@ -626,10 +690,10 @@ def list_serving_endpoints() -> str:
 
 @mcp.tool()
 def get_serving_endpoint(endpoint_name: str) -> str:
-    """Detalhes de um model serving endpoint específico.
+    """Details of a specific model serving endpoint.
 
     Args:
-        endpoint_name: Nome do serving endpoint.
+        endpoint_name: Serving endpoint name.
     """
     client = _get_client()
     ep = client.serving_endpoints.get(name=endpoint_name)
@@ -638,7 +702,7 @@ def get_serving_endpoint(endpoint_name: str) -> str:
 
     if ep.state:
         if hasattr(ep.state, "ready"):
-            lines.append(f"**Estado:** {ep.state.ready}")
+            lines.append(f"**State:** {ep.state.ready}")
         if hasattr(ep.state, "config_update"):
             lines.append(f"**Config Update:** {ep.state.config_update}")
 
@@ -646,18 +710,18 @@ def get_serving_endpoint(endpoint_name: str) -> str:
         created = datetime.fromtimestamp(
             ep.creation_timestamp / 1000, tz=timezone.utc
         ).strftime("%Y-%m-%d %H:%M:%S UTC")
-        lines.append(f"**Criado em:** {created}")
+        lines.append(f"**Created At:** {created}")
 
     if ep.last_updated_timestamp:
         updated = datetime.fromtimestamp(
             ep.last_updated_timestamp / 1000, tz=timezone.utc
         ).strftime("%Y-%m-%d %H:%M:%S UTC")
-        lines.append(f"**Atualizado em:** {updated}")
+        lines.append(f"**Updated At:** {updated}")
 
     # Served models
     if ep.config and ep.config.served_entities:
-        lines.append("\n### Modelos Servidos\n")
-        lines.append("| Nome | Versão | Scale to Zero | Workload Size |")
+        lines.append("\n### Served Models\n")
+        lines.append("| Name | Version | Scale to Zero | Workload Size |")
         lines.append("| --- | --- | --- | --- |")
         for entity in ep.config.served_entities:
             name = entity.name or "-"
@@ -667,8 +731,8 @@ def get_serving_endpoint(endpoint_name: str) -> str:
             lines.append(f"| {name} | {version} | {scale} | {workload} |")
 
     if ep.config and ep.config.traffic_config and ep.config.traffic_config.routes:
-        lines.append("\n### Rotas de Tráfego\n")
-        lines.append("| Modelo | Percentual |")
+        lines.append("\n### Traffic Routes\n")
+        lines.append("| Model | Percentage |")
         lines.append("| --- | --- |")
         for route in ep.config.traffic_config.routes:
             lines.append(f"| {route.served_model_name} | {route.traffic_percentage}% |")
@@ -676,7 +740,7 @@ def get_serving_endpoint(endpoint_name: str) -> str:
     return "\n".join(lines)
 
 
-# ── Entrypoint ───────────────────────────────────────────────────────────────
+# -- Entrypoint ---------------------------------------------------------------
 
 if __name__ == "__main__":
     mcp.run(transport="stdio")

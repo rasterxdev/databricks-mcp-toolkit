@@ -56,10 +56,51 @@ exploração de tabelas, escrita de SQL e criação de notebooks PySpark.
 O agent `data-scientist` é acionado para tarefas de ciência de dados: ML lifecycle (MLflow),
 análise estatística avançada, feature engineering, séries temporais e modelos preditivos.
 
-## Convenções
+## Convenções de dados
 
 - Formato de notebook Databricks: arquivos `.py` com `# Databricks notebook source` e `# COMMAND ----------`
 - SQL: preferir CTEs sobre subqueries
 - Sempre limitar resultados com LIMIT em queries exploratórias
 - Nomes de tabelas no formato completo: `catalog.schema.table`
 - Ao analisar uma tabela, seguir o fluxo: describe → stats → sample → queries específicas
+
+## Convenções de desenvolvimento
+
+### Commits
+
+Seguir [Conventional Commits](https://www.conventionalcommits.org/):
+
+- `feat:` — nova funcionalidade
+- `fix:` — correção de bug
+- `docs:` — documentação
+- `release: vX.Y.Z` — commit de release (gerado pelo script)
+
+Mensagens em português, concisas (1-2 frases), focando no "porquê" e não no "o quê".
+Sempre incluir `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>` quando o agente contribuir.
+
+### Branches
+
+- `main` — branch principal, sempre estável
+- `release/vX.Y.Z` — branch temporário de release (criado pelo `scripts/release.sh`, removido pelo `scripts/post-release.sh`)
+
+### Releases
+
+O projeto usa Versionamento Semântico (`MAJOR.MINOR.PATCH`). O fluxo é automatizado:
+
+1. **Preparar:** `./scripts/release.sh patch|minor|major` — bumpa VERSION, gera CHANGELOG.md, cria branch, commit, tag e PR
+2. **Revisar:** merge do PR no GitHub
+3. **Publicar:** `./scripts/post-release.sh vX.Y.Z` — push da tag, cria GitHub Release, limpa branch
+
+**Nunca** fazer bump manual do `VERSION` ou editar `CHANGELOG.md` diretamente — sempre usar os scripts.
+
+### Estrutura do repositório
+
+```
+setup.sh, update.sh, VERSION    — raiz (URLs públicas, não mover)
+scripts/install.sh              — instalador via clone (contribuidores)
+scripts/release.sh              — automação de release (dev-only)
+scripts/post-release.sh         — publicação de release (dev-only)
+databricks_mcp/server.py        — MCP Server (produto)
+.claude/commands/*.md            — skills (slash commands)
+.claude/agents/*.md              — agentes especializados
+```

@@ -1,22 +1,22 @@
 ---
-description: Analise de series temporais e geracao de notebook de forecasting
+description: Time series analysis and forecasting notebook generation
 allowed-tools: mcp__databricks__run_sql, mcp__databricks__describe_table, mcp__databricks__sample_table, mcp__databricks__table_stats, mcp__databricks__list_tables, mcp__databricks__list_experiments
 ---
 
-O usuario quer analisar uma serie temporal ou criar um notebook de forecasting.
+The user wants to analyze a time series or create a forecasting notebook.
 
-## Instrucoes
+## Instructions
 
-### 1. Entender os dados temporais
-- Use `describe_table` para identificar colunas de data e metricas
-- Use `sample_table` para ver o formato dos dados
-- Identifique a granularidade temporal (diaria, semanal, mensal)
+### 1. Understand the temporal data
+- Use `describe_table` to identify date columns and metrics
+- Use `sample_table` to see the data format
+- Identify the temporal granularity (daily, weekly, monthly)
 
-### 2. Analise exploratoria temporal via SQL
+### 2. Temporal exploratory analysis via SQL
 
-Execute as seguintes analises com `run_sql`:
+Execute the following analyses with `run_sql`:
 
-#### Periodo e cobertura
+#### Period and coverage
 ```sql
 SELECT
   MIN(data_col) as inicio,
@@ -26,7 +26,7 @@ SELECT
 FROM tabela
 ```
 
-#### Tendencia (medias moveis)
+#### Trend (moving averages)
 ```sql
 SELECT
   data_col,
@@ -37,7 +37,7 @@ FROM tabela
 ORDER BY data_col
 ```
 
-#### Sazonalidade
+#### Seasonality
 ```sql
 SELECT
   MONTH(data_col) as mes,
@@ -48,7 +48,7 @@ GROUP BY MONTH(data_col)
 ORDER BY mes
 ```
 
-#### Variacao periodo a periodo
+#### Period-over-period variation
 ```sql
 SELECT
   data_col,
@@ -60,7 +60,7 @@ FROM tabela
 ORDER BY data_col
 ```
 
-#### Deteccao de anomalias temporais
+#### Temporal anomaly detection
 ```sql
 WITH stats AS (
   SELECT AVG(valor) as media, STDDEV(valor) as desvio
@@ -72,24 +72,24 @@ WHERE ABS((t.valor - s.media) / s.desvio) > 2
 ORDER BY t.data_col
 ```
 
-### 3. Gerar notebook de forecasting (se solicitado)
+### 3. Generate forecasting notebook (if requested)
 
-Crie um notebook `.py` no formato Databricks com:
+Create a `.py` notebook in Databricks format with:
 
-- **Celula 1**: Imports (pandas, prophet ou statsmodels, mlflow, matplotlib)
-- **Celula 2**: Carregamento e preparacao dos dados
-- **Celula 3**: Visualizacao da serie (tendencia, sazonalidade)
-- **Celula 4**: Decomposicao (trend, seasonal, residual)
-- **Celula 5**: Modelo de forecasting com logging no MLflow
-- **Celula 6**: Previsoes e intervalos de confianca
-- **Celula 7**: Metricas de avaliacao (RMSE, MAE, MAPE)
+- **Cell 1**: Imports (pandas, prophet or statsmodels, mlflow, matplotlib)
+- **Cell 2**: Data loading and preparation
+- **Cell 3**: Time series visualization (trend, seasonality)
+- **Cell 4**: Decomposition (trend, seasonal, residual)
+- **Cell 5**: Forecasting model with MLflow logging
+- **Cell 6**: Predictions and confidence intervals
+- **Cell 7**: Evaluation metrics (RMSE, MAE, MAPE)
 
-### 4. Formato de saida
+### 4. Output format
 
-- Apresente os achados sobre tendencia, sazonalidade e anomalias
-- Interprete os padroes encontrados
-- Se gerar notebook, salve como `.py` com formato Databricks
+- Present findings on trend, seasonality, and anomalies
+- Interpret the patterns found
+- If generating a notebook, save as `.py` in Databricks format
 
-## Entrada do usuario
+## User input
 
 $ARGUMENTS

@@ -1,31 +1,31 @@
 ---
-description: Cria um notebook Python/PySpark no formato Databricks
+description: Create a Python/PySpark notebook in Databricks format
 allowed-tools: mcp__databricks__run_sql, mcp__databricks__describe_table, mcp__databricks__sample_table, mcp__databricks__table_stats, Read, Write, Edit
 ---
 
-O usuário quer criar um notebook Python ou PySpark no formato Databricks.
+The user wants to create a Python or PySpark notebook in Databricks format.
 
-## Instruções
+## Instructions
 
-1. Se o usuário referenciou tabelas, use `describe_table` para entender os schemas
-2. Crie o notebook como arquivo `.py` usando o formato Databricks:
-   - Primeira linha: `# Databricks notebook source`
-   - Separador de células: `# COMMAND ----------`
-3. Estruture o notebook com:
-   - Célula de imports e configuração
-   - Célula de documentação (markdown com `# MAGIC %md`)
-   - Células de lógica com comentários explicativos
-   - Célula de validação/verificação ao final
-4. Salve o arquivo no diretório do projeto
+1. If the user referenced tables, use `describe_table` to understand their schemas
+2. Create the notebook as a `.py` file using Databricks format:
+   - First line: `# Databricks notebook source`
+   - Cell separator: `# COMMAND ----------`
+3. Structure the notebook with:
+   - Imports and configuration cell
+   - Documentation cell (markdown with `# MAGIC %md`)
+   - Logic cells with explanatory comments
+   - Validation/verification cell at the end
+4. Save the file in the project directory
 
-## Padrões de código
+## Code standards
 
-- Use `spark.read.table("catalog.schema.table")` para ler tabelas
-- Prefira DataFrame API para transformações complexas
-- Use `display()` para mostrar resultados
-- Adicione `# MAGIC %md` para células markdown de documentação
-- Trate erros com try/except onde necessário
+- Use `spark.read.table("catalog.schema.table")` to read tables
+- Prefer DataFrame API for complex transformations
+- Use `display()` to show results
+- Use `# MAGIC %md` for markdown documentation cells
+- Handle errors with try/except where necessary
 
-## Entrada do usuário
+## User input
 
 $ARGUMENTS

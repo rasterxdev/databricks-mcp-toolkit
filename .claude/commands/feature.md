@@ -1,33 +1,33 @@
 ---
-description: Analise de features e geracao de pipelines de feature engineering
+description: Feature analysis and feature engineering pipeline generation
 allowed-tools: mcp__databricks__run_sql, mcp__databricks__describe_table, mcp__databricks__sample_table, mcp__databricks__table_stats, mcp__databricks__list_tables, mcp__databricks__list_schemas
 ---
 
-O usuario quer analisar features de uma tabela ou gerar um pipeline de feature engineering.
+The user wants to analyze features of a table or generate a feature engineering pipeline.
 
-## Instrucoes
+## Instructions
 
-### 1. Entender os dados
-- Use `describe_table` para listar colunas e tipos
-- Use `table_stats` para cardinalidade e nulos
-- Use `sample_table` para ver dados reais
-- Identifique a variavel alvo se informada
+### 1. Understand the data
+- Use `describe_table` to list columns and types
+- Use `table_stats` for cardinality and nulls
+- Use `sample_table` to view actual data
+- Identify the target variable if provided
 
-### 2. Analise de features via SQL
+### 2. Feature analysis via SQL
 
-Execute as seguintes analises com `run_sql`:
+Execute the following analyses with `run_sql`:
 
-#### Tipagem e cardinalidade
-- Classifique cada coluna: numerica continua, numerica discreta, categorica, temporal, texto
-- Avalie cardinalidade para decidir estrategia de encoding
+#### Typing and cardinality
+- Classify each column: continuous numeric, discrete numeric, categorical, temporal, text
+- Evaluate cardinality to decide encoding strategy
 
-#### Correlacao com target (se informado)
+#### Correlation with target (if provided)
 ```sql
 SELECT CORR(feature_numerica, target) as correlacao
 FROM tabela
 ```
 
-#### Distribuicao de categoricas
+#### Categorical distribution
 ```sql
 SELECT coluna, COUNT(*) as freq,
   ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) as pct
@@ -37,7 +37,7 @@ ORDER BY freq DESC
 LIMIT 20
 ```
 
-#### Analise de nulos
+#### Null analysis
 ```sql
 SELECT
   COUNT(*) as total,
@@ -46,41 +46,41 @@ SELECT
 FROM tabela
 ```
 
-#### Power de cada feature (Information Value aproximado)
-- Para cada feature, calcule a separacao entre classes do target
-- Identifique features com maior poder preditivo
+#### Predictive power of each feature (approximate Information Value)
+- For each feature, calculate the separation between target classes
+- Identify features with the highest predictive power
 
-### 3. Recomendar transformacoes
+### 3. Recommend transformations
 
-Com base na analise, recomende:
+Based on the analysis, recommend:
 
-- **Numericas**: scaling (StandardScaler, MinMaxScaler), log transform para skewed, binning
-- **Categoricas**: one-hot (baixa cardinalidade), target encoding (alta cardinalidade), frequency encoding
-- **Temporais**: extrair ano, mes, dia, dia da semana, trimestre, feriados
-- **Window features**: medias moveis, lags, diffs, rolling min/max/std
-- **Interacoes**: ratios entre features, multiplicacoes, features polinomiais
-- **Nulos**: imputacao por media/mediana/moda, flag de missing
+- **Numeric**: scaling (StandardScaler, MinMaxScaler), log transform for skewed distributions, binning
+- **Categorical**: one-hot (low cardinality), target encoding (high cardinality), frequency encoding
+- **Temporal**: extract year, month, day, day of week, quarter, holidays
+- **Window features**: moving averages, lags, diffs, rolling min/max/std
+- **Interactions**: ratios between features, multiplications, polynomial features
+- **Nulls**: imputation by mean/median/mode, missing flag
 
-### 4. Gerar notebook de feature engineering (se solicitado)
+### 4. Generate feature engineering notebook (if requested)
 
-Crie um notebook `.py` no formato Databricks com:
+Create a `.py` notebook in Databricks format with:
 
-- **Celula 1**: Imports e carregamento dos dados
-- **Celula 2**: Analise exploratoria das features
-- **Celula 3**: Tratamento de nulos
-- **Celula 4**: Encoding de categoricas
-- **Celula 5**: Transformacoes numericas
-- **Celula 6**: Features temporais e window features
-- **Celula 7**: Selecao de features (correlation filter, variance threshold)
-- **Celula 8**: Salvar dataset de features como tabela Delta
+- **Cell 1**: Imports and data loading
+- **Cell 2**: Feature exploratory analysis
+- **Cell 3**: Null handling
+- **Cell 4**: Categorical encoding
+- **Cell 5**: Numeric transformations
+- **Cell 6**: Temporal features and window features
+- **Cell 7**: Feature selection (correlation filter, variance threshold)
+- **Cell 8**: Save feature dataset as a Delta table
 
-### 5. Formato de saida
+### 5. Output format
 
-- Apresente analise organizada por tipo de feature
-- Classifique features por relevancia (se target informado)
-- Liste transformacoes recomendadas em formato de tabela
-- Se gerar notebook, use formato Databricks
+- Present analysis organized by feature type
+- Rank features by relevance (if target is provided)
+- List recommended transformations in table format
+- If generating a notebook, use Databricks format
 
-## Entrada do usuario
+## User input
 
 $ARGUMENTS

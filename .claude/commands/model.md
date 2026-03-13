@@ -1,57 +1,57 @@
 ---
-description: Gerencia e inspeciona experimentos, runs, modelos e endpoints MLflow
+description: Manage and inspect MLflow experiments, runs, models, and endpoints
 allowed-tools: mcp__databricks__list_experiments, mcp__databricks__get_experiment_runs, mcp__databricks__get_run_details, mcp__databricks__compare_runs, mcp__databricks__get_metric_history, mcp__databricks__list_registered_models, mcp__databricks__get_model_versions, mcp__databricks__list_serving_endpoints, mcp__databricks__get_serving_endpoint, mcp__databricks__run_sql
 ---
 
-O usuario quer inspecionar ou gerenciar recursos de ML no Databricks (MLflow experiments, runs, modelos, endpoints).
+The user wants to inspect or manage ML resources on Databricks (MLflow experiments, runs, models, endpoints).
 
-## Instrucoes
+## Instructions
 
-Interprete o comando do usuario e execute a acao apropriada:
+Interpret the user's command and execute the appropriate action:
 
-### Listar experimentos
-- Use `list_experiments` para mostrar experimentos disponiveis
-- Exemplo: `/model list experiments`
+### List experiments
+- Use `list_experiments` to show available experiments
+- Example: `/model list experiments`
 
-### Explorar runs de um experimento
-- Use `get_experiment_runs` com o ID do experimento
-- Mostre metricas e parametros resumidos
-- Exemplo: `/model runs <experiment_id>`
+### Explore runs of an experiment
+- Use `get_experiment_runs` with the experiment ID
+- Show summarized metrics and parameters
+- Example: `/model runs <experiment_id>`
 
-### Detalhes de um run
-- Use `get_run_details` para ver parametros, metricas, tags e artifacts
-- Exemplo: `/model run <run_id>`
+### Run details
+- Use `get_run_details` to view parameters, metrics, tags, and artifacts
+- Example: `/model run <run_id>`
 
-### Comparar runs
-- Use `compare_runs` com IDs separados por virgula
-- Destaque o melhor modelo baseado nas metricas
-- Exemplo: `/model compare <run_id1>,<run_id2>`
+### Compare runs
+- Use `compare_runs` with comma-separated IDs
+- Highlight the best model based on metrics
+- Example: `/model compare <run_id1>,<run_id2>`
 
-### Historico de metrica
-- Use `get_metric_history` para ver evolucao de uma metrica
-- Analise convergencia e overfitting
-- Exemplo: `/model history <run_id> loss`
+### Metric history
+- Use `get_metric_history` to view the evolution of a metric
+- Analyze convergence and overfitting
+- Example: `/model history <run_id> loss`
 
-### Listar modelos registrados
-- Use `list_registered_models` para ver modelos no Registry
-- Exemplo: `/model list models`
+### List registered models
+- Use `list_registered_models` to view models in the Registry
+- Example: `/model list models`
 
-### Versoes de um modelo
-- Use `get_model_versions` para ver versoes de um modelo especifico
-- Exemplo: `/model versions <catalog.schema.model_name>`
+### Model versions
+- Use `get_model_versions` to view versions of a specific model
+- Example: `/model versions <catalog.schema.model_name>`
 
 ### Serving endpoints
-- Use `list_serving_endpoints` para listar endpoints
-- Use `get_serving_endpoint` para detalhes de um endpoint especifico
-- Exemplo: `/model endpoints` ou `/model endpoint <nome>`
+- Use `list_serving_endpoints` to list endpoints
+- Use `get_serving_endpoint` for details on a specific endpoint
+- Example: `/model endpoints` or `/model endpoint <name>`
 
-## Formato de saida
+## Output format
 
-- Formate resultados em tabelas markdown
-- Ao comparar runs, destaque o melhor resultado
-- Ao analisar historico de metricas, comente sobre convergencia
-- Sugira proximos passos quando relevante
+- Format results as markdown tables
+- When comparing runs, highlight the best result
+- When analyzing metric history, comment on convergence
+- Suggest next steps when relevant
 
-## Entrada do usuario
+## User input
 
 $ARGUMENTS

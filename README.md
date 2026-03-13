@@ -14,7 +14,7 @@ Analistas e engenheiros de dados passam boa parte do dia alternando entre termin
 - **SQL via linguagem natural**: descreva o que precisa, o agente monta a query
 - **Exploração guiada**: navegue pelo Unity Catalog de forma progressiva e estruturada
 - **Notebooks prontos**: gere arquivos `.py` no formato Databricks com um comando
-- **Segurança por padrão**: credenciais ficam em `.env` local, nunca sobem no git
+- **Segurança por padrão**: credenciais ficam em arquivo protegido (`chmod 600`), nunca sobem no git
 
 ---
 
@@ -246,7 +246,7 @@ O MCP Server roda localmente e expõe 18 ferramentas que o Claude Code chama dir
 | `list_serving_endpoints` | Lista model serving endpoints | Verificar endpoints ativos |
 | `get_serving_endpoint` | Detalhes de um serving endpoint específico | `get_serving_endpoint("my-endpoint")` |
 
-**Como funciona a conexão:** o servidor se conecta ao Databricks usando as credenciais do `.env` e seleciona automaticamente um SQL Warehouse em estado `RUNNING`. O client e o warehouse são cacheados para evitar reconexões desnecessárias. As ferramentas de MLflow e Model Registry usam o mesmo `WorkspaceClient` — sem dependências adicionais.
+**Como funciona a conexão:** o servidor carrega credenciais seguindo a prioridade: `.env` do projeto > `.databricks_mcp_cfg` global > perfil CLI. Seleciona automaticamente um SQL Warehouse em estado `RUNNING`. O client e o warehouse são cacheados para evitar reconexões desnecessárias. As ferramentas de MLflow e Model Registry usam o mesmo `WorkspaceClient` — sem dependências adicionais.
 
 ---
 
@@ -271,43 +271,61 @@ git clone git@github.com:rasterxdev/databricks-mcp-toolkit.git && cd databricks
 ./install.sh
 ```
 
-**O que o instalador faz:**
+O instalador é interativo e guia você em 3 etapas:
 
-- Copia o MCP Server para `~/.local/share/databricks-mcp/`
-- Cria o ambiente virtual com as dependências (`databricks-connect`, `databricks-sdk`, `mcp[cli]`, `python-dotenv`)
-- Configura o gitignore global (`.mcp.json` nunca sobe no git)
-- Adiciona o comando `databricks-mcp-init` ao seu shell
+1. **Dependências** — cria o ambiente virtual com `databricks-connect`, `databricks-sdk`, `mcp[cli]` e `python-dotenv`
+2. **Credenciais** — pede `DATABRICKS_HOST`, `DATABRICKS_TOKEN` e opcionalmente `DATABRICKS_WAREHOUSE_ID`, salvando em `~/.local/share/databricks-mcp/.databricks_mcp_cfg` com permissões restritas (`chmod 600`)
+3. **Modo de instalação** — você escolhe entre:
+
+| Modo | O que faz | Quando usar |
+|---|---|---|
+| **Global** (recomendado) | Instala agentes, skills e `.mcp.json` no `~/.claude/`. Funciona em qualquer terminal. | Maioria dos casos |
+| **Por projeto** | Cria o comando `databricks-mcp-init` para configurar cada projeto individualmente. | Quando precisa de configurações diferentes por projeto |
 
 ---
 
-## Uso em qualquer projeto
+## Uso
 
-Depois de instalado globalmente, basta rodar em qualquer repositório:
+### Modo Global (recomendado)
 
-```bash
-cd ~/meu-projeto-databricks     # qualquer repo clonado
-databricks-mcp-init             # configura MCP + skills + agent
-```
-
-Na primeira vez, crie o `.env` com suas credenciais:
-
-```bash
-cat > .env << 'EOF'
-DATABRICKS_HOST=https://<seu-workspace>.cloud.databricks.com/
-DATABRICKS_TOKEN=<seu_token_aqui>
-DATABRICKS_WAREHOUSE_ID=<opcional_warehouse_id>
-EOF
-```
-
-> `DATABRICKS_WAREHOUSE_ID` é opcional. Se omitido, o servidor usa automaticamente o primeiro warehouse em estado `RUNNING`.
-
-Depois, inicie o Claude Code normalmente:
+Após a instalação global, basta abrir qualquer terminal e rodar:
 
 ```bash
 claude
 ```
 
-> Nada disso vai para o git. O `.mcp.json` é ignorado globalmente e o `.env` contém credenciais pessoais.
+Pronto. O Databricks MCP já está disponível — agentes, skills e ferramentas funcionam em qualquer projeto, sem configuração adicional.
+
+**Override por projeto:** se precisar usar credenciais diferentes em um projeto específico, crie um `.env` na raiz:
+
+```bash
+cat > .env << 'EOF'
+DATABRICKS_HOST=https://<outro-workspace>.cloud.databricks.com/
+DATABRICKS_TOKEN=<outro_token>
+EOF
+```
+
+### Modo Por Projeto
+
+Depois de instalado, rode em cada repositório:
+
+```bash
+cd ~/meu-projeto-databricks
+databricks-mcp-init             # copia .mcp.json + agentes + skills
+claude
+```
+
+As credenciais globais são usadas automaticamente. Não precisa criar `.env` a menos que queira um override local.
+
+### Prioridade de credenciais
+
+O servidor segue esta ordem de prioridade:
+
+1. **`.env` do projeto** — override local (se existir)
+2. **`.databricks_mcp_cfg`** — credenciais globais (criadas pelo instalador)
+3. **Perfil CLI** — `~/.databrickscfg` (fallback)
+
+> `DATABRICKS_WAREHOUSE_ID` é opcional em qualquer modo. Se omitido, o servidor usa automaticamente o primeiro warehouse em estado `RUNNING`.
 
 ---
 
@@ -339,45 +357,49 @@ flowchart TD
 
 ### Estrutura de pastas
 
-**Instalação global** (uma vez por máquina, via `./install.sh`):
+**MCP Server** (instalação base, sempre criada):
 
 ```
 ~/.local/share/databricks-mcp/
 ├── server.py                     ← MCP Server (18 ferramentas)
 ├── .venv/                        ← Python + dependências
-├── setup.sh                      ← Script de setup por projeto
+├── .databricks_mcp_cfg           ← Credenciais (chmod 600)
+├── .install_mode                 ← Modo: global ou project
+├── setup.sh                      ← Script de init (modo por projeto)
 ├── commands/                     ← Templates das skills
-│   ├── sql.md
-│   ├── analyze.md
-│   ├── notebook.md
-│   ├── explore.md
-│   ├── predict.md
-│   ├── stats.md
-│   ├── timeseries.md
-│   ├── model.md
-│   └── feature.md
+│   ├── sql.md, analyze.md, notebook.md, explore.md
+│   ├── predict.md, stats.md, timeseries.md
+│   ├── model.md, feature.md
 └── agents/
     ├── databricks-analyst.md
     └── data-scientist.md
 ```
 
-**Por projeto** (gerado pelo `databricks-mcp-init`):
+**Modo Global** (skills, agentes e MCP no `~/.claude/`):
+
+```
+~/.claude/
+├── .mcp.json                     ← Config MCP (aponta para server global)
+├── CLAUDE.md                     ← Instruções globais para o Claude Code
+├── commands/                     ← Skills disponíveis em qualquer projeto
+│   ├── sql.md, analyze.md, notebook.md, explore.md
+│   ├── predict.md, stats.md, timeseries.md
+│   ├── model.md, feature.md
+└── agents/
+    ├── databricks-analyst.md
+    └── data-scientist.md
+```
+
+**Modo Por Projeto** (gerado pelo `databricks-mcp-init`):
 
 ```
 ~/qualquer-projeto/
 ├── .mcp.json                     ← Aponta para o server global (gitignored)
-├── .env                          ← Credenciais pessoais (gitignored)
 └── .claude/
     ├── commands/                  ← Skills copiadas
-    │   ├── sql.md
-    │   ├── analyze.md
-    │   ├── notebook.md
-    │   ├── explore.md
-    │   ├── predict.md
-    │   ├── stats.md
-    │   ├── timeseries.md
-    │   ├── model.md
-    │   └── feature.md
+    │   ├── sql.md, analyze.md, notebook.md, explore.md
+    │   ├── predict.md, stats.md, timeseries.md
+    │   ├── model.md, feature.md
     └── agents/
         ├── databricks-analyst.md
         └── data-scientist.md
@@ -387,13 +409,17 @@ flowchart TD
 
 ## Customização
 
-### Variáveis do `.env`
+### Credenciais
+
+As credenciais são configuradas durante a instalação e salvas em `~/.local/share/databricks-mcp/.databricks_mcp_cfg`. Para override por projeto, crie um `.env` na raiz do projeto.
 
 | Variável | Obrigatória | Descrição |
 |---|---|---|
 | `DATABRICKS_HOST` | Sim | URL do workspace (ex: `https://dbc-xxx.cloud.databricks.com/`) |
 | `DATABRICKS_TOKEN` | Sim | Token de acesso pessoal (PAT) |
 | `DATABRICKS_WAREHOUSE_ID` | Não | ID do SQL Warehouse. Se omitido, usa o primeiro em estado `RUNNING` |
+
+Para reconfigurar credenciais, rode `./install.sh` novamente — o instalador detecta credenciais existentes e oferece a opção de mantê-las ou substituí-las.
 
 ### Adicionar novas ferramentas ao MCP Server
 
@@ -438,8 +464,8 @@ A skill fica disponível imediatamente como `/nome-do-arquivo`. Rode `./install.
 ### Para novos membros do time
 
 1. Clone este repo e rode `./install.sh`
-2. Gere seu token Databricks (ver instruções abaixo)
-3. Em qualquer projeto, rode `databricks-mcp-init` e crie o `.env`
+2. O instalador pedirá o token Databricks (ver abaixo como gerar)
+3. Escolha o modo Global (recomendado) e pronto — qualquer terminal com Claude Code já funciona
 
 ### Gerando seu token Databricks
 
@@ -453,13 +479,11 @@ A skill fica disponível imediatamente como `/nome-do-arquivo`. Rode `./install.
 
 | Vai no git (este repo) | Fica local (por máquina) |
 |---|---|
-| `databricks_mcp/server.py` | `~/.local/share/databricks-mcp/` (instalação global) |
-| `.claude/commands/*.md` | `.mcp.json` (gerado por `databricks-mcp-init`) |
-| `.claude/agents/*.md` | `.env` (credenciais pessoais) |
-| `install.sh` | `.venv/` (ambiente virtual) |
-| `CLAUDE.md` | `.claude/settings.local.json` (permissões locais) |
-| `README.md` | |
-| `databricks.yml` | |
+| `databricks_mcp/server.py` | `~/.local/share/databricks-mcp/` (instalação + credenciais) |
+| `.claude/commands/*.md` | `~/.claude/` (modo global: agentes, skills, MCP config) |
+| `.claude/agents/*.md` | `.env` (override de credenciais por projeto) |
+| `install.sh` | `.claude/settings.local.json` (permissões locais) |
+| `CLAUDE.md`, `README.md` | |
 
 ---
 
@@ -468,9 +492,9 @@ A skill fica disponível imediatamente como `/nome-do-arquivo`. Rode `./install.
 | Problema | Solução |
 |---|---|
 | MCP Server não aparece | Reinicie o Claude Code (`exit` + `claude`) |
-| Erro de autenticação | Verifique se o `.env` tem `DATABRICKS_HOST` e `DATABRICKS_TOKEN` corretos |
+| Erro de autenticação | Verifique `~/.local/share/databricks-mcp/.databricks_mcp_cfg` ou o `.env` do projeto |
 | Nenhum warehouse disponível | Acesse o workspace e inicie um SQL Warehouse |
 | `wait_timeout` error | O timeout máximo da API é 50s, queries longas podem precisar de polling |
 | Python não encontrado | Verifique se tem Python 3.10+ instalado (`python3 --version`) |
-| `databricks-mcp-init` não encontrado | Rode `source ~/.zshrc` ou abra um novo terminal |
+| `databricks-mcp-init` não encontrado | Apenas modo por projeto — rode `source ~/.zshrc` ou abra um novo terminal |
 | Skills não aparecem | Verifique se `.claude/commands/` existe e tem os arquivos `.md` |

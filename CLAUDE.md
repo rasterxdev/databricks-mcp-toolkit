@@ -4,7 +4,9 @@
 
 - Workspace: https://<seu-workspace>.cloud.databricks.com/
 - MCP Server: instalado globalmente em `~/.local/share/databricks-mcp/`, configurado via `.mcp.json`
-- Credenciais: carregadas do arquivo `.env` na raiz do projeto (`DATABRICKS_HOST` e `DATABRICKS_TOKEN`)
+- Credenciais (prioridade): `.env` do projeto > `.databricks_mcp_cfg` global > perfil CLI
+  - Global: `~/.local/share/databricks-mcp/.databricks_mcp_cfg` (criado pelo instalador)
+  - Por projeto (override): `.env` na raiz do projeto (`DATABRICKS_HOST` e `DATABRICKS_TOKEN`)
 - Código-fonte do MCP: `databricks_mcp/server.py` (este repo é a source of truth)
 
 ## Ferramentas MCP disponíveis

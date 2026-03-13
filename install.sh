@@ -33,7 +33,31 @@ cp "$SCRIPT_DIR/.claude/commands/"*.md "$MCP_HOME/commands/" 2>/dev/null || true
 cp "$SCRIPT_DIR/.claude/agents/"*.md "$MCP_HOME/agents/" 2>/dev/null || true
 echo "✅ Skills e agents copiados para $MCP_HOME/"
 
-# ── 2. Criar/atualizar ambiente virtual ─────────────────────
+# ── 2. Checar pré-requisitos ─────────────────────────────────
+
+PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
+PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
+
+if [ "$PYTHON_MAJOR" -lt 3 ] || { [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 10 ]; }; then
+    echo "❌ Python 3.10+ é necessário (encontrado: $PYTHON_VERSION)"
+    exit 1
+fi
+
+if ! python3 -c "import venv" &>/dev/null; then
+    echo ""
+    echo "❌ Módulo venv não encontrado."
+    echo ""
+    echo "  No Ubuntu/Debian, instale com:"
+    echo "    sudo apt install python${PYTHON_VERSION}-venv"
+    echo ""
+    echo "  No Fedora/RHEL:"
+    echo "    sudo dnf install python3-libs"
+    echo ""
+    exit 1
+fi
+
+# ── 3. Criar/atualizar ambiente virtual ──────────────────────
 
 if [ ! -d "$MCP_HOME/.venv" ]; then
     echo ""
@@ -47,7 +71,7 @@ else
     echo "✅ Dependências atualizadas"
 fi
 
-# ── 3. Credenciais ──────────────────────────────────────────
+# ── 4. Credenciais ──────────────────────────────────────────
 
 echo ""
 echo "──────────────────────────────────────────────────────────"
@@ -107,7 +131,7 @@ EOF
     echo "  ✅ Credenciais salvas em $CFG_FILE"
 fi
 
-# ── 4. Modo de instalação ──────────────────────────────────
+# ── 5. Modo de instalação ──────────────────────────────────
 
 echo ""
 echo "──────────────────────────────────────────────────────────"

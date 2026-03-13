@@ -47,6 +47,7 @@ check_cmd() {
 
 check_cmd python3
 check_cmd curl
+check_cmd git
 
 PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
 PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
@@ -57,6 +58,20 @@ if [ "$PYTHON_MAJOR" -lt 3 ] || { [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR"
     exit 1
 fi
 echo -e "  ${GREEN}✓${RESET} Python $PYTHON_VERSION"
+
+# Checar se o módulo venv está disponível (no Ubuntu/Debian precisa de python3.X-venv)
+if ! python3 -c "import venv" &>/dev/null; then
+    echo -e "  ${YELLOW}❌${RESET} Módulo ${BOLD}venv${RESET} não encontrado."
+    echo ""
+    echo -e "  No Ubuntu/Debian, instale com:"
+    echo -e "    ${CYAN}sudo apt install python${PYTHON_VERSION}-venv${RESET}"
+    echo ""
+    echo -e "  No Fedora/RHEL:"
+    echo -e "    ${CYAN}sudo dnf install python3-libs${RESET}"
+    echo ""
+    exit 1
+fi
+echo -e "  ${GREEN}✓${RESET} Python venv"
 
 if command -v claude &>/dev/null; then
     echo -e "  ${GREEN}✓${RESET} Claude Code encontrado"

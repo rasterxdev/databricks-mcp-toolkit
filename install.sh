@@ -33,6 +33,11 @@ cp "$SCRIPT_DIR/.claude/commands/"*.md "$MCP_HOME/commands/" 2>/dev/null || true
 cp "$SCRIPT_DIR/.claude/agents/"*.md "$MCP_HOME/agents/" 2>/dev/null || true
 echo "✅ Skills e agents copiados para $MCP_HOME/"
 
+cp "$SCRIPT_DIR/VERSION" "$MCP_HOME/.version" 2>/dev/null || true
+cp "$SCRIPT_DIR/update.sh" "$MCP_HOME/update.sh" 2>/dev/null || true
+chmod +x "$MCP_HOME/update.sh" 2>/dev/null || true
+echo "✅ Versionamento e auto-update configurados"
+
 # ── 2. Checar pré-requisitos ─────────────────────────────────
 
 PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')

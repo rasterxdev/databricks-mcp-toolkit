@@ -106,6 +106,13 @@ for agent in $AGENTS; do
 done
 echo -e "  ${GREEN}✓${RESET} Agentes ($( echo "$AGENTS" | wc -w | tr -d ' '))"
 
+# Versão e atualizador
+curl -fsSL "$REPO_RAW/VERSION" -o "$MCP_HOME/.version"
+curl -fsSL "$REPO_RAW/update.sh" -o "$MCP_HOME/update.sh"
+chmod +x "$MCP_HOME/update.sh"
+curl -fsSL "$REPO_RAW/.claude/commands/databricks-update.md" -o "$MCP_HOME/commands/databricks-update.md"
+echo -e "  ${GREEN}✓${RESET} Versionamento e auto-update"
+
 echo ""
 
 # ── 2. Criar/atualizar ambiente virtual ──────────────────────

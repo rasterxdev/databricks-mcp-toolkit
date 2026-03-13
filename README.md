@@ -24,7 +24,7 @@ Acionados automaticamente pelo Claude Code conforme o tipo de tarefa.
 
 | Agente | Perfil | Quando é acionado |
 |---|---|---|
-| `databricks-analyst` | Engenheiro de Dados sênior | Exploração de dados, SQL, notebooks PySpark |
+| `databricks-analyst` | Analista de Dados sênior | Exploração de dados, SQL, notebooks PySpark |
 | `data-scientist` | Cientista de Dados / ML Engineer | MLflow, modelos preditivos, séries temporais |
 
 [Ver detalhes dos agentes →](docs/agents.md)

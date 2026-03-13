@@ -9,7 +9,7 @@ O toolkit inclui dois agentes especializados, acionados automaticamente pelo Cla
 | Atributo | Detalhe |
 |---|---|
 | **Modelo** | Sonnet |
-| **Perfil** | Engenheiro de Dados e Analista sênior |
+| **Perfil** | Analista de Dados sênior |
 | **Ferramentas** | 9 ferramentas MCP de dados + Read, Write, Edit, Bash, Glob, Grep |
 
 ### Capacidades

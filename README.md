@@ -289,6 +289,22 @@ git clone git@github.com:rasterxdev/databricks-mcp-toolkit.git && cd databricks-
 
 ---
 
+## Atualização
+
+O toolkit verifica automaticamente se há atualizações quando o Claude Code abre. Se encontrar uma versão nova, você verá um aviso na primeira resposta de qualquer ferramenta MCP:
+
+> **Atualização disponível:** Databricks MCP Toolkit v0.4.0 → v0.5.0. Rode `/databricks-update` para atualizar.
+
+Para atualizar, basta digitar `/databricks-update` no chat do Claude Code. Ou rode manualmente:
+
+```bash
+~/.local/share/databricks-mcp/update.sh
+```
+
+A atualização baixa os arquivos mais recentes do GitHub e atualiza as dependências. **Credenciais não são alteradas.** Após atualizar, reinicie o Claude Code (`exit` + `claude`).
+
+---
+
 ## Uso
 
 ### Modo Global (recomendado)

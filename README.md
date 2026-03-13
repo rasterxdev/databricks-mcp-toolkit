@@ -256,7 +256,8 @@ A instalação é feita uma única vez por máquina.
 
 ### Pré-requisitos
 
-- Python 3.10+
+- Python 3.10+ com módulo `venv` (no Ubuntu/Debian: `sudo apt install python3.X-venv`)
+- Git
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) instalado
 - Acesso ao workspace Databricks
 - Token de acesso pessoal (PAT) do Databricks
@@ -503,5 +504,6 @@ A skill fica disponível imediatamente como `/nome-do-arquivo`. Rode `./install.
 | Nenhum warehouse disponível | Acesse o workspace e inicie um SQL Warehouse |
 | `wait_timeout` error | O timeout máximo da API é 50s, queries longas podem precisar de polling |
 | Python não encontrado | Verifique se tem Python 3.10+ instalado (`python3 --version`) |
+| Erro ao criar venv | Instale o módulo venv: `sudo apt install python3.X-venv` (substitua X pela sua versão) |
 | `databricks-mcp-init` não encontrado | Apenas modo por projeto — rode `source ~/.zshrc` ou abra um novo terminal |
 | Skills não aparecem | Verifique se `.claude/commands/` existe e tem os arquivos `.md` |

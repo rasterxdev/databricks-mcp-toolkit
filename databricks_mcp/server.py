@@ -1,141 +1,127 @@
 """
-MCP Server for Databricks.
+MCP Server for Databricks (HTTP transport).
 
-Provides tools to execute SQL, explore catalogs,
-describe tables, and interact with the Databricks workspace.
+Stateless server that receives Databricks credentials per-request via HTTP headers.
+Designed to be deployed on Railway, Fly.io, Render, or any container platform.
+
+Each user configures their own DATABRICKS_HOST and DATABRICKS_TOKEN locally.
+The Claude Code MCP client sends these as headers with every tool call.
 
 Usage:
     python databricks_mcp/server.py
 """
 
+import contextvars
+import hashlib
 import os
 import threading
-import urllib.request
+import time
 from datetime import datetime, timezone
-from functools import lru_cache, wraps
 from textwrap import dedent
 
-from dotenv import load_dotenv
 from databricks.sdk import WorkspaceClient
 from mcp.server.fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
-# Credential priority:
-#   1. Environment variables already set in the system
-#   2. Project .env (Claude Code cwd)
-#   3. Global .databricks_mcp_cfg (~/.local/share/databricks-mcp/)
-#   4. CLI profile (~/.databrickscfg)
-load_dotenv()  # loads project .env (does not override existing env vars)
-_MCP_HOME = os.path.join(os.path.expanduser("~"), ".local", "share", "databricks-mcp")
-_cfg_path = os.path.join(_MCP_HOME, ".databricks_mcp_cfg")
-if os.path.isfile(_cfg_path):
-    load_dotenv(_cfg_path, override=False)  # fills gaps without overriding
+# ---------------------------------------------------------------------------
+# Per-request credentials (populated by ASGI middleware on each HTTP request)
+# ---------------------------------------------------------------------------
 
-# -- Initialization -----------------------------------------------------------
+_db_host = contextvars.ContextVar("db_host", default="")
+_db_token = contextvars.ContextVar("db_token", default="")
+_db_warehouse_id = contextvars.ContextVar("db_warehouse_id", default="")
+
+# ---------------------------------------------------------------------------
+# Client & warehouse caches (shared across requests, thread-safe)
+# ---------------------------------------------------------------------------
+
+_client_cache: dict[str, WorkspaceClient] = {}
+_client_lock = threading.Lock()
+
+_warehouse_cache: dict[str, tuple[str, float]] = {}
+_warehouse_lock = threading.Lock()
+_WAREHOUSE_TTL = 300  # 5 minutes
+
+# ---------------------------------------------------------------------------
+# Initialization
+# ---------------------------------------------------------------------------
 
 mcp = FastMCP(
     "Databricks",
     instructions=dedent("""
         MCP server for Databricks interaction.
         Allows executing SQL, exploring catalogs/schemas/tables,
-        and managing workspace resources.
+        and managing workspace resources via Unity Catalog, MLflow,
+        and Model Serving.
     """).strip(),
 )
 
 
-# -- Auto-update check -------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Health check
+# ---------------------------------------------------------------------------
 
-_update_info: dict = {}
-_update_notice_shown = False
-
-
-def _check_for_updates():
-    """Check for available updates (background, silent)."""
-    try:
-        version_file = os.path.join(_MCP_HOME, ".version")
-        if not os.path.isfile(version_file):
-            return
-        with open(version_file) as f:
-            local_ver = f.read().strip()
-        url = "https://raw.githubusercontent.com/rasterxdev/databricks-mcp-toolkit/main/VERSION"
-        with urllib.request.urlopen(url, timeout=5) as resp:
-            remote_ver = resp.read().decode().strip()
-        if remote_ver != local_ver:
-            _update_info["local"] = local_ver
-            _update_info["remote"] = remote_ver
-    except Exception:
-        pass
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request: Request) -> JSONResponse:
+    return JSONResponse({"status": "ok", "service": "databricks-mcp"})
 
 
-threading.Thread(target=_check_for_updates, daemon=True).start()
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
-
-def _prepend_update_notice(result: str) -> str:
-    """Prepend an update notice to the first response of the session."""
-    global _update_notice_shown
-    if _update_notice_shown or not _update_info:
-        return result
-    _update_notice_shown = True
-    return (
-        f"> **Update available:** Databricks MCP Toolkit "
-        f"v{_update_info['local']} → v{_update_info['remote']}. "
-        f"Run `/databricks-update` to update.\n\n---\n\n"
-        + result
-    )
-
-
-# Wrap mcp.tool to inject update notice into the first response
-_original_tool = mcp.tool
-
-
-def _tool_with_update_notice(**kwargs):
-    original_decorator = _original_tool(**kwargs)
-
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kw):
-            return _prepend_update_notice(func(*args, **kw))
-        return original_decorator(wrapper)
-
-    return decorator
-
-
-mcp.tool = _tool_with_update_notice
-
-
-# -- Helpers ------------------------------------------------------------------
-
-
-@lru_cache(maxsize=1)
 def _get_client() -> WorkspaceClient:
-    """Create a WorkspaceClient (cached) using environment variables or ~/.databrickscfg."""
-    host = os.environ.get("DATABRICKS_HOST")
-    token = os.environ.get("DATABRICKS_TOKEN")
-    if host and token:
-        return WorkspaceClient(host=host, token=token)
-    # fallback to CLI profile
-    return WorkspaceClient(profile="vscode_databricks")
+    """Return a WorkspaceClient for the current request's credentials (cached)."""
+    host = _db_host.get()
+    token = _db_token.get()
+    if not host or not token:
+        raise RuntimeError(
+            "Missing Databricks credentials. "
+            "Configure X-Databricks-Host and X-Databricks-Token headers "
+            "in your .mcp.json."
+        )
+    key = hashlib.sha256(f"{host}:{token}".encode()).hexdigest()[:16]
+    with _client_lock:
+        if key not in _client_cache:
+            _client_cache[key] = WorkspaceClient(host=host, token=token)
+        return _client_cache[key]
 
 
-@lru_cache(maxsize=1)
 def _get_warehouse_id() -> str:
-    """Return the configured warehouse_id or the first available one (cached)."""
-    wh_id = os.environ.get("DATABRICKS_WAREHOUSE_ID")
+    """Return the warehouse ID for the current request (cached with TTL)."""
+    wh_id = _db_warehouse_id.get()
     if wh_id:
         return wh_id
+
+    host = _db_host.get()
+    token = _db_token.get()
+    cache_key = f"{host}:{token[:8]}"
+    now = time.time()
+
+    with _warehouse_lock:
+        if cache_key in _warehouse_cache:
+            cached_id, cached_time = _warehouse_cache[cache_key]
+            if now - cached_time < _WAREHOUSE_TTL:
+                return cached_id
+
     client = _get_client()
     warehouses = list(client.warehouses.list())
-    # prefer a warehouse that is already RUNNING
     for wh in warehouses:
         if str(wh.state) == "State.RUNNING":
+            with _warehouse_lock:
+                _warehouse_cache[cache_key] = (wh.id, now)
             return wh.id
-    # otherwise, return the first one (will be started on demand)
     if warehouses:
+        with _warehouse_lock:
+            _warehouse_cache[cache_key] = (warehouses[0].id, now)
         return warehouses[0].id
     raise RuntimeError("No SQL Warehouse found in the workspace.")
 
 
-# -- Tools --------------------------------------------------------------------
-
+# ---------------------------------------------------------------------------
+# Tools — Data & SQL
+# ---------------------------------------------------------------------------
 
 @mcp.tool()
 def run_sql(query: str, max_rows: int = 100) -> str:
@@ -165,7 +151,6 @@ def run_sql(query: str, max_rows: int = 100) -> str:
     columns = [col.name for col in result.manifest.schema.columns]
     rows = result.result.data_array if result.result and result.result.data_array else []
 
-    # Format as markdown table
     lines = []
     lines.append("| " + " | ".join(columns) + " |")
     lines.append("| " + " | ".join("---" for _ in columns) + " |")
@@ -293,12 +278,10 @@ def table_stats(full_table_name: str) -> str:
 
     escaped = f"`{full_table_name.replace('.', '`.`')}`"
 
-    # Count total rows
     count_result = run_sql(f"SELECT COUNT(*) as total FROM {escaped}", max_rows=1)
 
-    # Build per-column stats query
     col_stats = []
-    for col in table.columns[:20]:  # limit to 20 columns to avoid overflow
+    for col in table.columns[:20]:
         name = col.name
         col_stats.append(
             f"COUNT(DISTINCT `{name}`) as `{name}_distinct`, "
@@ -351,8 +334,9 @@ def query_history(max_results: int = 10) -> str:
     return "\n".join(lines)
 
 
-# -- MLflow & Model Registry -------------------------------------------------
-
+# ---------------------------------------------------------------------------
+# Tools — MLflow & Model Registry
+# ---------------------------------------------------------------------------
 
 @mcp.tool()
 def list_experiments(max_results: int = 20) -> str:
@@ -466,7 +450,6 @@ def get_run_details(run_id: str) -> str:
     if info.artifact_uri:
         lines.append(f"**Artifacts:** {info.artifact_uri}")
 
-    # Parameters
     if data and data.params:
         lines.append("\n### Parameters\n")
         lines.append("| Parameter | Value |")
@@ -474,7 +457,6 @@ def get_run_details(run_id: str) -> str:
         for p in data.params:
             lines.append(f"| {p.key} | {p.value} |")
 
-    # Metrics
     if data and data.metrics:
         lines.append("\n### Metrics\n")
         lines.append("| Metric | Value |")
@@ -482,7 +464,6 @@ def get_run_details(run_id: str) -> str:
         for m in data.metrics:
             lines.append(f"| {m.key} | {m.value} |")
 
-    # Tags
     if data and data.tags:
         lines.append("\n### Tags\n")
         lines.append("| Tag | Value |")
@@ -516,7 +497,6 @@ def compare_runs(run_ids: str) -> str:
     if len(runs_data) < 2:
         return "Could not find at least 2 valid runs."
 
-    # Collect all metrics and parameters
     all_metrics = set()
     all_params = set()
     for r in runs_data:
@@ -528,7 +508,6 @@ def compare_runs(run_ids: str) -> str:
     run_labels = [r.info.run_id[:8] for r in runs_data]
     lines = []
 
-    # Metrics table
     if all_metrics:
         lines.append("### Metrics\n")
         header = "| Metric | " + " | ".join(run_labels) + " |"
@@ -548,7 +527,6 @@ def compare_runs(run_ids: str) -> str:
                 values.append(val)
             lines.append(f"| {metric} | " + " | ".join(values) + " |")
 
-    # Parameters table
     if all_params:
         lines.append("\n### Parameters\n")
         header = "| Parameter | " + " | ".join(run_labels) + " |"
@@ -718,7 +696,6 @@ def get_serving_endpoint(endpoint_name: str) -> str:
         ).strftime("%Y-%m-%d %H:%M:%S UTC")
         lines.append(f"**Updated At:** {updated}")
 
-    # Served models
     if ep.config and ep.config.served_entities:
         lines.append("\n### Served Models\n")
         lines.append("| Name | Version | Scale to Zero | Workload Size |")
@@ -740,7 +717,42 @@ def get_serving_endpoint(endpoint_name: str) -> str:
     return "\n".join(lines)
 
 
-# -- Entrypoint ---------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# ASGI Middleware — extracts Databricks credentials from HTTP headers
+# ---------------------------------------------------------------------------
+
+class _CredentialMiddleware:
+    """ASGI middleware that populates contextvars from request headers."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            headers = dict(scope.get("headers", []))
+            _db_host.set(headers.get(b"x-databricks-host", b"").decode())
+            _db_token.set(headers.get(b"x-databricks-token", b"").decode())
+            _db_warehouse_id.set(headers.get(b"x-databricks-warehouse-id", b"").decode())
+        await self.app(scope, receive, send)
+
+
+# ---------------------------------------------------------------------------
+# Entrypoint
+# ---------------------------------------------------------------------------
+
+def create_app():
+    """Create the ASGI app with credential middleware."""
+    app = mcp.streamable_http_app()
+    return _CredentialMiddleware(app)
+
 
 if __name__ == "__main__":
-    mcp.run(transport="stdio")
+    import uvicorn
+
+    port = int(os.environ.get("PORT", "8787"))
+    uvicorn.run(
+        "databricks_mcp.server:create_app",
+        factory=True,
+        host="0.0.0.0",
+        port=port,
+    )

@@ -1,9 +1,14 @@
 #!/bin/bash
 # ─────────────────────────────────────────────────────────────
-# Databricks MCP Toolkit — Instalador
+# Databricks MCP Toolkit — Instalação Local (Client-Only)
 #
-# Instala o MCP Server globalmente e configura credenciais,
-# agentes e skills para uso com Claude Code.
+# Para desenvolvedores que clonaram o repositório.
+# Instala agentes, skills e configuração MCP globalmente.
+#
+# Uso:
+#   git clone git@github.com:rasterxdev/databricks-mcp-toolkit.git
+#   cd databricks-mcp-toolkit
+#   ./scripts/install.sh
 # ─────────────────────────────────────────────────────────────
 
 set -e
@@ -13,116 +18,121 @@ CLAUDE_GLOBAL="$HOME/.claude"
 CFG_FILE="$MCP_HOME/.databricks_mcp_cfg"
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-echo ""
-echo "══════════════════════════════════════════════════════════"
-echo "  Databricks MCP Toolkit — Instalador"
-echo "══════════════════════════════════════════════════════════"
-echo ""
-echo "  Origem:  $SCRIPT_DIR"
-echo "  Destino: $MCP_HOME"
-echo ""
-
-# ── 1. Criar diretórios e copiar server ─────────────────────
-
-mkdir -p "$MCP_HOME/commands" "$MCP_HOME/agents"
-
-cp "$SCRIPT_DIR/databricks_mcp/server.py" "$MCP_HOME/server.py"
-echo "✅ MCP Server copiado"
-
-cp "$SCRIPT_DIR/.claude/commands/"*.md "$MCP_HOME/commands/" 2>/dev/null || true
-cp "$SCRIPT_DIR/.claude/agents/"*.md "$MCP_HOME/agents/" 2>/dev/null || true
-echo "✅ Skills e agents copiados para $MCP_HOME/"
-
-cp "$SCRIPT_DIR/VERSION" "$MCP_HOME/.version" 2>/dev/null || true
-cp "$SCRIPT_DIR/update.sh" "$MCP_HOME/update.sh" 2>/dev/null || true
-chmod +x "$MCP_HOME/update.sh" 2>/dev/null || true
-echo "✅ Versionamento e auto-update configurados"
-
-# ── 2. Checar pré-requisitos ─────────────────────────────────
-
-PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
-PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
-
-if [ "$PYTHON_MAJOR" -lt 3 ] || { [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 10 ]; }; then
-    echo "❌ Python 3.10+ é necessário (encontrado: $PYTHON_VERSION)"
-    exit 1
-fi
-
-if ! python3 -c "import venv" &>/dev/null; then
-    echo ""
-    echo "❌ Módulo venv não encontrado."
-    echo ""
-    echo "  No Ubuntu/Debian, instale com:"
-    echo "    sudo apt install python${PYTHON_VERSION}-venv"
-    echo ""
-    echo "  No Fedora/RHEL:"
-    echo "    sudo dnf install python3-libs"
-    echo ""
-    exit 1
-fi
-
-# ── 3. Criar/atualizar ambiente virtual ──────────────────────
-
-if [ ! -d "$MCP_HOME/.venv" ]; then
-    echo ""
-    echo "📦 Criando ambiente virtual..."
-    python3 -m venv "$MCP_HOME/.venv"
-    "$MCP_HOME/.venv/bin/pip" install --quiet databricks-connect databricks-sdk "mcp[cli]" python-dotenv
-    echo "✅ Ambiente virtual criado e dependências instaladas"
+# ── Cores ────────────────────────────────────────────────────
+if [ -t 1 ]; then
+    BOLD="\033[1m"
+    DIM="\033[2m"
+    RESET="\033[0m"
+    GREEN="\033[32m"
+    YELLOW="\033[33m"
+    CYAN="\033[36m"
+    RED="\033[31m"
 else
-    echo "⏭️  Ambiente virtual existente, atualizando dependências..."
-    "$MCP_HOME/.venv/bin/pip" install --quiet --upgrade databricks-connect databricks-sdk "mcp[cli]" python-dotenv
-    echo "✅ Dependências atualizadas"
+    BOLD="" DIM="" RESET="" GREEN="" YELLOW="" CYAN="" RED=""
 fi
 
-# ── 4. Credenciais ──────────────────────────────────────────
+echo ""
+echo -e "${BOLD}══════════════════════════════════════════════════════════${RESET}"
+echo -e "${BOLD}  Databricks MCP Toolkit — Instalador Local v2${RESET}"
+echo -e "${BOLD}══════════════════════════════════════════════════════════${RESET}"
+echo ""
+echo -e "  ${DIM}Origem:  $SCRIPT_DIR${RESET}"
+echo -e "  ${DIM}Destino: $CLAUDE_GLOBAL/${RESET}"
+echo ""
+echo -e "  ${DIM}Instalação leve: apenas agentes, skills e configuração.${RESET}"
+echo -e "  ${DIM}O MCP Server roda remotamente — sem Python local.${RESET}"
+echo ""
+
+# ── 1. Configuração do servidor MCP ─────────────────────────
+
+echo -e "${BOLD}──────────────────────────────────────────────────────────${RESET}"
+echo -e "${BOLD}  Servidor MCP${RESET}"
+echo -e "${BOLD}──────────────────────────────────────────────────────────${RESET}"
+echo ""
+
+DEFAULT_SERVER_URL=""
+if [ -f "$CFG_FILE" ]; then
+    DEFAULT_SERVER_URL=$(grep "^MCP_SERVER_URL=" "$CFG_FILE" 2>/dev/null | cut -d= -f2-)
+fi
+
+echo "  URL do servidor MCP (onde o server está deployado)."
+echo -e "  ${DIM}Ex: https://databricks-mcp.fly.dev${RESET}"
+echo ""
+
+if [ -n "$DEFAULT_SERVER_URL" ]; then
+    read -r -p "  MCP_SERVER_URL [$DEFAULT_SERVER_URL]: " SERVER_URL
+    SERVER_URL=${SERVER_URL:-$DEFAULT_SERVER_URL}
+else
+    read -r -p "  MCP_SERVER_URL: " SERVER_URL
+fi
+
+while [ -z "$SERVER_URL" ]; do
+    echo -e "  ${RED}✗${RESET} URL do servidor é obrigatória."
+    read -r -p "  MCP_SERVER_URL: " SERVER_URL
+done
+
+SERVER_URL="${SERVER_URL%/}"
 
 echo ""
-echo "──────────────────────────────────────────────────────────"
-echo "  Credenciais Databricks"
-echo "──────────────────────────────────────────────────────────"
+
+# ── 2. Credenciais Databricks ────────────────────────────────
+
+echo -e "${BOLD}──────────────────────────────────────────────────────────${RESET}"
+echo -e "${BOLD}  Credenciais Databricks${RESET}"
+echo -e "${BOLD}──────────────────────────────────────────────────────────${RESET}"
 echo ""
 
 CONFIGURE_CREDS="s"
 
 if [ -f "$CFG_FILE" ]; then
-    echo "  Credenciais existentes encontradas em:"
-    echo "  $CFG_FILE"
-    echo ""
-    read -r -p "  Deseja manter as credenciais atuais? [S/n] " KEEP_CREDS
-    KEEP_CREDS=${KEEP_CREDS:-S}
-    if [[ "$KEEP_CREDS" =~ ^[sS] ]]; then
-        CONFIGURE_CREDS="n"
+    EXISTING_HOST=$(grep "^DATABRICKS_HOST=" "$CFG_FILE" 2>/dev/null | cut -d= -f2-)
+    if [ -n "$EXISTING_HOST" ]; then
+        echo -e "  Credenciais existentes encontradas:"
+        echo -e "  ${DIM}Host: $EXISTING_HOST${RESET}"
         echo ""
-        echo "  ✅ Credenciais mantidas"
+        read -r -p "  Deseja manter as credenciais atuais? [S/n] " KEEP_CREDS
+        KEEP_CREDS=${KEEP_CREDS:-S}
+        if [[ "$KEEP_CREDS" =~ ^[sS] ]]; then
+            CONFIGURE_CREDS="n"
+            echo -e "  ${GREEN}✓${RESET} Credenciais mantidas"
+        fi
     fi
 fi
 
 if [ "$CONFIGURE_CREDS" = "s" ]; then
-    echo ""
     echo "  Informe suas credenciais do Databricks."
-    echo "  (Para gerar um token: Workspace → Settings → Developer → Access tokens)"
+    echo -e "  ${DIM}(Para gerar um token: Workspace > Settings > Developer > Access tokens)${RESET}"
     echo ""
 
-    read -r -p "  DATABRICKS_HOST (ex: https://dbc-xxx.cloud.databricks.com/): " DB_HOST
+    read -r -p "  DATABRICKS_HOST (ex: https://dbc-xxx.cloud.databricks.com): " DB_HOST
     while [ -z "$DB_HOST" ]; do
-        echo "  ❌ DATABRICKS_HOST é obrigatório."
+        echo -e "  ${RED}✗${RESET} DATABRICKS_HOST é obrigatório."
         read -r -p "  DATABRICKS_HOST: " DB_HOST
     done
 
     read -r -s -p "  DATABRICKS_TOKEN (input oculto): " DB_TOKEN
     echo ""
     while [ -z "$DB_TOKEN" ]; do
-        echo "  ❌ DATABRICKS_TOKEN é obrigatório."
+        echo -e "  ${RED}✗${RESET} DATABRICKS_TOKEN é obrigatório."
         read -r -s -p "  DATABRICKS_TOKEN: " DB_TOKEN
         echo ""
     done
 
     read -r -p "  DATABRICKS_WAREHOUSE_ID (opcional, Enter para auto-detectar): " DB_WAREHOUSE
+fi
 
-    # Salvar credenciais
+echo ""
+
+# ── 3. Salvar configuração ───────────────────────────────────
+
+echo -e "${BOLD}  Salvando configuração...${RESET}"
+echo ""
+
+mkdir -p "$MCP_HOME/commands" "$MCP_HOME/agents"
+
+if [ "$CONFIGURE_CREDS" = "s" ]; then
     cat > "$CFG_FILE" << EOF
+MCP_SERVER_URL=$SERVER_URL
 DATABRICKS_HOST=$DB_HOST
 DATABRICKS_TOKEN=$DB_TOKEN
 EOF
@@ -132,46 +142,53 @@ EOF
     fi
 
     chmod 600 "$CFG_FILE"
-    echo ""
-    echo "  ✅ Credenciais salvas em $CFG_FILE"
+else
+    if grep -q "^MCP_SERVER_URL=" "$CFG_FILE" 2>/dev/null; then
+        sed -i "s|^MCP_SERVER_URL=.*|MCP_SERVER_URL=$SERVER_URL|" "$CFG_FILE"
+    else
+        echo "MCP_SERVER_URL=$SERVER_URL" >> "$CFG_FILE"
+    fi
+
+    DB_HOST=$(grep "^DATABRICKS_HOST=" "$CFG_FILE" | cut -d= -f2-)
+    DB_TOKEN=$(grep "^DATABRICKS_TOKEN=" "$CFG_FILE" | cut -d= -f2-)
+    DB_WAREHOUSE=$(grep "^DATABRICKS_WAREHOUSE_ID=" "$CFG_FILE" 2>/dev/null | cut -d= -f2- || true)
 fi
 
-# ── 5. Modo de instalação ──────────────────────────────────
+echo -e "  ${GREEN}✓${RESET} Configuração salva em $CFG_FILE"
+
+# ── 4. Copiar skills, agents e versão ────────────────────────
 
 echo ""
-echo "──────────────────────────────────────────────────────────"
-echo "  Modo de Instalação"
-echo "──────────────────────────────────────────────────────────"
-echo ""
-echo "  [1] ⭐ GLOBAL (recomendado)"
-echo "      Instala agentes, skills e MCP no ~/.claude/"
-echo "      Funciona em qualquer terminal com Claude Code."
-echo "      Não precisa configurar nada por projeto."
-echo ""
-echo "  [2] Por projeto"
-echo "      Rode 'databricks-mcp-init' em cada projeto"
-echo "      para copiar agentes, skills e .mcp.json."
+echo -e "${BOLD}  Copiando agentes e skills do repositório...${RESET}"
 echo ""
 
-read -r -p "  Escolha [1/2] (padrão: 1): " INSTALL_MODE
-INSTALL_MODE=${INSTALL_MODE:-1}
+cp "$SCRIPT_DIR/.claude/commands/"*.md "$MCP_HOME/commands/" 2>/dev/null || true
+cp "$SCRIPT_DIR/.claude/agents/"*.md "$MCP_HOME/agents/" 2>/dev/null || true
+echo -e "  ${GREEN}✓${RESET} Skills e agentes copiados"
 
-if [ "$INSTALL_MODE" = "1" ]; then
-    # ── Instalação Global ───────────────────────────────────
-    echo ""
-    echo "  📦 Instalando globalmente em $CLAUDE_GLOBAL/ ..."
-    echo ""
+cp "$SCRIPT_DIR/VERSION" "$MCP_HOME/.version" 2>/dev/null || true
+cp "$SCRIPT_DIR/update.sh" "$MCP_HOME/update.sh" 2>/dev/null || true
+chmod +x "$MCP_HOME/update.sh" 2>/dev/null || true
+echo -e "  ${GREEN}✓${RESET} Versionamento e auto-update"
 
-    # Criar diretórios globais
-    mkdir -p "$CLAUDE_GLOBAL/commands" "$CLAUDE_GLOBAL/agents"
+echo ""
 
-    # Copiar agents e skills
-    cp "$SCRIPT_DIR/.claude/commands/"*.md "$CLAUDE_GLOBAL/commands/" 2>/dev/null || true
-    cp "$SCRIPT_DIR/.claude/agents/"*.md "$CLAUDE_GLOBAL/agents/" 2>/dev/null || true
-    echo "  ✅ Agentes e skills instalados em $CLAUDE_GLOBAL/"
+# ── 5. Instalar globalmente no ~/.claude/ ─────────────────────
 
-    # Copiar CLAUDE.md global
-    cat > "$CLAUDE_GLOBAL/CLAUDE.md" << 'CLAUDEMD_EOF'
+echo -e "${BOLD}  Instalando globalmente em $CLAUDE_GLOBAL/ ...${RESET}"
+echo ""
+
+mkdir -p "$CLAUDE_GLOBAL/commands" "$CLAUDE_GLOBAL/agents"
+
+cp "$MCP_HOME/commands/"*.md "$CLAUDE_GLOBAL/commands/" 2>/dev/null || true
+cp "$MCP_HOME/agents/"*.md  "$CLAUDE_GLOBAL/agents/"   2>/dev/null || true
+echo -e "  ${GREEN}✓${RESET} Agentes e skills instalados"
+
+# CLAUDE.md global
+CLAUDE_MD="$CLAUDE_GLOBAL/CLAUDE.md"
+MARKER="# Databricks MCP Toolkit"
+
+DATABRICKS_BLOCK=$(cat "$SCRIPT_DIR/docs/claude-md-template.md" 2>/dev/null || cat << 'CLAUDEMD_EOF'
 # Databricks MCP Toolkit
 
 ## Ferramentas MCP disponíveis
@@ -207,7 +224,7 @@ Ao interagir com o Databricks, **sempre** use as ferramentas MCP (prefixo `mcp__
 - `/explore [catalog[.schema[.table]]]` — navegar Unity Catalog progressivamente
 
 ### Ciência de dados e ML
-- `/predict <tabela e objetivo>` — criar notebook com pipeline ML completo (EDA → features → treino → avaliação → MLflow)
+- `/predict <tabela e objetivo>` — criar notebook com pipeline ML completo
 - `/stats <tabela ou descrição>` — executar testes estatísticos e análises avançadas via SQL
 - `/timeseries <tabela ou descrição>` — análise de séries temporais + notebook de forecasting
 - `/model <comando>` — inspecionar experimentos, runs, modelos e endpoints MLflow
@@ -229,160 +246,109 @@ análise estatística avançada, feature engineering, séries temporais e modelo
 - Nomes de tabelas no formato completo: `catalog.schema.table`
 - Ao analisar uma tabela, seguir o fluxo: describe → stats → sample → queries específicas
 CLAUDEMD_EOF
-    echo "  ✅ CLAUDE.md instalado em $CLAUDE_GLOBAL/"
+)
 
-    # Criar/atualizar .mcp.json global (merge seguro com config existente)
-    "$MCP_HOME/.venv/bin/python" << PYEOF
-import json, os
+if [ -f "$CLAUDE_MD" ]; then
+    if grep -q "$MARKER" "$CLAUDE_MD"; then
+        BEFORE=$(sed "/$MARKER/,\$d" "$CLAUDE_MD")
+        if [ -n "$BEFORE" ]; then
+            printf '%s\n\n%s\n' "$BEFORE" "$DATABRICKS_BLOCK" > "$CLAUDE_MD"
+        else
+            echo "$DATABRICKS_BLOCK" > "$CLAUDE_MD"
+        fi
+    else
+        printf '\n\n%s\n' "$DATABRICKS_BLOCK" >> "$CLAUDE_MD"
+    fi
+else
+    echo "$DATABRICKS_BLOCK" > "$CLAUDE_MD"
+fi
+echo -e "  ${GREEN}✓${RESET} CLAUDE.md instalado"
 
-mcp_json_path = os.path.expanduser("$CLAUDE_GLOBAL/.mcp.json")
-server_cmd = os.path.expanduser("$MCP_HOME/.venv/bin/python")
-server_arg = os.path.expanduser("$MCP_HOME/server.py")
+# ── 6. Gerar .mcp.json ──────────────────────────────────────
 
-data = {}
-if os.path.isfile(mcp_json_path):
-    with open(mcp_json_path) as f:
-        try:
-            data = json.load(f)
-        except json.JSONDecodeError:
-            data = {}
+MCP_JSON="$CLAUDE_GLOBAL/.mcp.json"
+MCP_URL="${SERVER_URL}/mcp"
 
-if "mcpServers" not in data:
-    data["mcpServers"] = {}
+HEADERS_JSON="{\"X-Databricks-Host\": \"${DB_HOST}\", \"X-Databricks-Token\": \"${DB_TOKEN}\""
+if [ -n "$DB_WAREHOUSE" ]; then
+    HEADERS_JSON="${HEADERS_JSON}, \"X-Databricks-Warehouse-Id\": \"${DB_WAREHOUSE}\""
+fi
+HEADERS_JSON="${HEADERS_JSON}}"
 
-data["mcpServers"]["databricks"] = {
-    "command": server_cmd,
-    "args": [server_arg]
+TMP_JSON=$(mktemp)
+
+if [ -f "$MCP_JSON" ] && command -v python3 &>/dev/null; then
+    python3 -c "
+import json, sys
+
+path = '$MCP_JSON'
+try:
+    with open(path) as f:
+        data = json.load(f)
+except (json.JSONDecodeError, FileNotFoundError):
+    data = {}
+
+if 'mcpServers' not in data:
+    data['mcpServers'] = {}
+
+data['mcpServers']['databricks'] = {
+    'url': '${MCP_URL}',
+    'headers': json.loads('''${HEADERS_JSON}''')
 }
 
-with open(mcp_json_path, "w") as f:
+with open('$TMP_JSON', 'w') as f:
     json.dump(data, f, indent=2)
-    f.write("\n")
-PYEOF
-    echo "  ✅ .mcp.json configurado em $CLAUDE_GLOBAL/"
-
-    # Salvar modo de instalação
-    echo "mode=global" > "$MCP_HOME/.install_mode"
-
-    # Configurar gitignore global (ainda útil para quem faz init por projeto)
-    GLOBAL_GITIGNORE="$HOME/.gitignore_global"
-    if [ ! -f "$GLOBAL_GITIGNORE" ] || ! grep -q "^\.mcp\.json$" "$GLOBAL_GITIGNORE"; then
-        echo ".mcp.json" >> "$GLOBAL_GITIGNORE"
-        git config --global core.excludesfile "$GLOBAL_GITIGNORE"
-    fi
-
-    echo ""
-    echo "══════════════════════════════════════════════════════════"
-    echo "  🚀 Instalação global completa!"
-    echo ""
-    echo "  Abra qualquer terminal e rode:"
-    echo "    claude"
-    echo ""
-    echo "  O Databricks MCP já está disponível em qualquer projeto."
-    echo "  Suas credenciais estão salvas em:"
-    echo "    $CFG_FILE"
-    echo ""
-    echo "  Para override por projeto, crie um .env local com"
-    echo "  DATABRICKS_HOST e DATABRICKS_TOKEN."
-    echo "══════════════════════════════════════════════════════════"
-
-else
-    # ── Instalação Por Projeto ──────────────────────────────
-    echo ""
-    echo "  📦 Configurando modo por projeto..."
-    echo ""
-
-    # Criar setup.sh (usado pelo databricks-mcp-init)
-    cat > "$MCP_HOME/setup.sh" << 'SETUP_EOF'
-#!/bin/bash
-set -e
-
-MCP_HOME="$HOME/.local/share/databricks-mcp"
-PROJECT_DIR="$(pwd)"
-
-echo ""
-echo "🔧 Databricks MCP Setup"
-echo "   Projeto: $PROJECT_DIR"
-echo ""
-
-# Gerar .mcp.json do projeto
-cat > "$PROJECT_DIR/.mcp.json" << EOF
+    f.write('\n')
+" 2>/dev/null || {
+        cat > "$TMP_JSON" << MCPEOF
 {
   "mcpServers": {
     "databricks": {
-      "command": "$MCP_HOME/.venv/bin/python",
-      "args": ["$MCP_HOME/server.py"]
+      "url": "${MCP_URL}",
+      "headers": ${HEADERS_JSON}
     }
   }
 }
-EOF
-echo "✅ .mcp.json criado"
-
-# Atualizar .gitignore
-if [ -f "$PROJECT_DIR/.gitignore" ]; then
-    if ! grep -q "^\.mcp\.json$" "$PROJECT_DIR/.gitignore"; then
-        echo ".mcp.json" >> "$PROJECT_DIR/.gitignore"
-        echo "✅ .mcp.json adicionado ao .gitignore"
-    fi
+MCPEOF
+    }
 else
-    echo ".mcp.json" > "$PROJECT_DIR/.gitignore"
-    echo "✅ .gitignore criado com .mcp.json"
+    cat > "$TMP_JSON" << MCPEOF
+{
+  "mcpServers": {
+    "databricks": {
+      "url": "${MCP_URL}",
+      "headers": ${HEADERS_JSON}
+    }
+  }
+}
+MCPEOF
 fi
 
-# Copiar agents e skills para o projeto
-mkdir -p "$PROJECT_DIR/.claude/commands" "$PROJECT_DIR/.claude/agents"
+mv "$TMP_JSON" "$MCP_JSON"
+chmod 600 "$MCP_JSON"
+echo -e "  ${GREEN}✓${RESET} .mcp.json configurado (URL: $MCP_URL)"
 
-for file in sql.md analyze.md notebook.md explore.md predict.md stats.md timeseries.md model.md feature.md; do
-    [ -f "$MCP_HOME/commands/$file" ] && cp "$MCP_HOME/commands/$file" "$PROJECT_DIR/.claude/commands/$file"
-done
+# Salvar modo
+echo "mode=global" > "$MCP_HOME/.install_mode"
 
-for file in databricks-analyst.md data-scientist.md; do
-    [ -f "$MCP_HOME/agents/$file" ] && cp "$MCP_HOME/agents/$file" "$PROJECT_DIR/.claude/agents/"
-done
-
-echo "✅ Skills e agents copiados para .claude/"
-echo ""
-echo "🚀 Setup completo! Reinicie o Claude Code neste diretório."
-echo ""
-echo "   Suas credenciais globais serão usadas automaticamente."
-echo "   Para override local, crie um .env com DATABRICKS_HOST e DATABRICKS_TOKEN."
-SETUP_EOF
-    chmod +x "$MCP_HOME/setup.sh"
-    echo "  ✅ Setup script configurado"
-
-    # Salvar modo de instalação
-    echo "mode=project" > "$MCP_HOME/.install_mode"
-
-    # Configurar gitignore global
-    GLOBAL_GITIGNORE="$HOME/.gitignore_global"
-    if [ ! -f "$GLOBAL_GITIGNORE" ] || ! grep -q "^\.mcp\.json$" "$GLOBAL_GITIGNORE"; then
-        echo ".mcp.json" >> "$GLOBAL_GITIGNORE"
-        git config --global core.excludesfile "$GLOBAL_GITIGNORE"
-    fi
-
-    # Adicionar alias ao shell
-    SHELL_RC="$HOME/.$(basename "$SHELL")rc"
-    if [ -f "$SHELL_RC" ] && ! grep -q "databricks-mcp-init" "$SHELL_RC"; then
-        echo '' >> "$SHELL_RC"
-        echo '# Databricks MCP - setup para projetos Claude Code' >> "$SHELL_RC"
-        echo "alias databricks-mcp-init=\"$MCP_HOME/setup.sh\"" >> "$SHELL_RC"
-        echo "  ✅ Alias 'databricks-mcp-init' adicionado ao $SHELL_RC"
-    else
-        echo "  ⏭️  Alias já configurado"
-    fi
-
-    echo ""
-    echo "══════════════════════════════════════════════════════════"
-    echo "  🚀 Instalação completa!"
-    echo ""
-    echo "  Para usar em qualquer projeto:"
-    echo "    1. cd ~/meu-projeto"
-    echo "    2. databricks-mcp-init"
-    echo "    3. claude"
-    echo ""
-    echo "  Suas credenciais estão salvas globalmente em:"
-    echo "    $CFG_FILE"
-    echo ""
-    echo "  (abra um novo terminal ou rode: source $SHELL_RC)"
-    echo "══════════════════════════════════════════════════════════"
+# Gitignore global
+GLOBAL_GITIGNORE="$HOME/.gitignore_global"
+if [ ! -f "$GLOBAL_GITIGNORE" ] || ! grep -q "^\.mcp\.json$" "$GLOBAL_GITIGNORE" 2>/dev/null; then
+    echo ".mcp.json" >> "$GLOBAL_GITIGNORE"
+    git config --global core.excludesfile "$GLOBAL_GITIGNORE" 2>/dev/null || true
 fi
+
+echo ""
+echo -e "${BOLD}══════════════════════════════════════════════════════════${RESET}"
+echo -e "${GREEN}${BOLD}  Instalação completa!${RESET}"
+echo ""
+echo "  Abra qualquer terminal e rode:"
+echo -e "    ${CYAN}claude${RESET}"
+echo ""
+echo "  O Databricks MCP já está disponível em qualquer projeto."
+echo ""
+echo -e "  ${DIM}Servidor: $SERVER_URL${RESET}"
+echo -e "  ${DIM}Config:   $CFG_FILE${RESET}"
+echo -e "  ${DIM}MCP:      $MCP_JSON${RESET}"
+echo -e "${BOLD}══════════════════════════════════════════════════════════${RESET}"
+echo ""

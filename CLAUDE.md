@@ -3,11 +3,12 @@
 ## Ambiente
 
 - Workspace: https://<seu-workspace>.cloud.databricks.com/
-- MCP Server: instalado globalmente em `~/.local/share/databricks-mcp/`, configurado via `.mcp.json`
-- Credenciais (prioridade): `.env` do projeto > `.databricks_mcp_cfg` global > perfil CLI
-  - Global: `~/.local/share/databricks-mcp/.databricks_mcp_cfg` (criado pelo instalador)
-  - Por projeto (override): `.env` na raiz do projeto (`DATABRICKS_HOST` e `DATABRICKS_TOKEN`)
-- Código-fonte do MCP: `databricks_mcp/server.py` (este repo é a source of truth)
+- MCP Server: roda remotamente (HTTP), configurado via `~/.claude/.mcp.json`
+- Credenciais: cada usuário configura seu PAT localmente no `.mcp.json` (headers HTTP)
+  - Config local: `~/.local/share/databricks-mcp/.databricks_mcp_cfg` (criado pelo instalador)
+  - Credenciais são enviadas como headers HTTP em cada request MCP
+- Código-fonte do MCP Server: `databricks_mcp/server.py` (este repo é a source of truth)
+- Deploy: Dockerfile na raiz, compatível com Fly.io, Railway, Render
 
 ## Ferramentas MCP disponíveis
 
@@ -114,11 +115,13 @@ O projeto usa Versionamento Semântico (`MAJOR.MINOR.PATCH`). O fluxo é automat
 ### Estrutura do repositório
 
 ```
+databricks_mcp/server.py        — MCP Server HTTP (deployado na cloud)
+Dockerfile, requirements.txt    — deployment do server
+fly.toml                        — config Fly.io (deploy gratuito)
 setup.sh, update.sh, VERSION    — raiz (URLs públicas, não mover)
 scripts/install.sh              — instalador via clone (contribuidores)
 scripts/release.sh              — automação de release (dev-only)
 scripts/post-release.sh         — publicação de release (dev-only)
-databricks_mcp/server.py        — MCP Server (produto)
 .claude/commands/*.md            — skills (slash commands)
 .claude/agents/*.md              — agentes especializados
 ```

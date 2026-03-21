@@ -5,6 +5,23 @@ Todas as alterações relevantes deste projeto são documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [0.1.2] - 2026-03-21
+
+### Novidades
+
+- feat: migra MCP server de stdio para HTTP (Streamable HTTP)
+
+### Outros
+
+- Merge pull request #6 from rasterxdev/develop
+
+**Diff completo:** [v0.1.1...v0.1.2](https://github.com/rasterxdev/databricks-mcp-toolkit/compare/v0.1.1...v0.1.2)
+
+Todas as alterações relevantes deste projeto são documentadas neste arquivo.
+
+O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
+e este projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
+
 ## [0.1.1] - 2026-03-13
 
 ### Correções

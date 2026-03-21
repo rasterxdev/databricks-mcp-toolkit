@@ -13,6 +13,7 @@ Usage:
 
 import contextvars
 import hashlib
+import hmac
 import os
 import threading
 import time
@@ -718,11 +719,15 @@ def get_serving_endpoint(endpoint_name: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# ASGI Middleware — extracts Databricks credentials from HTTP headers
+# ASGI Middleware — API Key auth + credential extraction from HTTP headers
 # ---------------------------------------------------------------------------
 
-class _CredentialMiddleware:
-    """ASGI middleware that populates contextvars from request headers."""
+# Server-side API Key (set as env var on Render/Fly.io/Railway)
+_MCP_API_KEY = os.environ.get("MCP_API_KEY", "")
+
+
+class _AuthMiddleware:
+    """ASGI middleware: validates API key, then populates contextvars from headers."""
 
     def __init__(self, app):
         self.app = app
@@ -730,9 +735,29 @@ class _CredentialMiddleware:
     async def __call__(self, scope, receive, send):
         if scope["type"] == "http":
             headers = dict(scope.get("headers", []))
+            path = scope.get("path", "")
+
+            # Health check is always public
+            if path == "/health":
+                await self.app(scope, receive, send)
+                return
+
+            # Validate API Key if configured on the server
+            if _MCP_API_KEY:
+                client_key = headers.get(b"x-api-key", b"").decode()
+                if not hmac.compare_digest(client_key, _MCP_API_KEY):
+                    response = JSONResponse(
+                        {"error": "Invalid or missing X-API-Key"},
+                        status_code=401,
+                    )
+                    await response(scope, receive, send)
+                    return
+
+            # Extract Databricks credentials
             _db_host.set(headers.get(b"x-databricks-host", b"").decode())
             _db_token.set(headers.get(b"x-databricks-token", b"").decode())
             _db_warehouse_id.set(headers.get(b"x-databricks-warehouse-id", b"").decode())
+
         await self.app(scope, receive, send)
 
 
@@ -741,9 +766,9 @@ class _CredentialMiddleware:
 # ---------------------------------------------------------------------------
 
 def create_app():
-    """Create the ASGI app with credential middleware."""
+    """Create the ASGI app with auth + credential middleware."""
     app = mcp.streamable_http_app()
-    return _CredentialMiddleware(app)
+    return _AuthMiddleware(app)
 
 
 if __name__ == "__main__":

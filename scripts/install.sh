@@ -73,6 +73,32 @@ done
 
 SERVER_URL="${SERVER_URL%/}"
 
+# API Key do servidor
+DEFAULT_API_KEY=""
+if [ -f "$CFG_FILE" ]; then
+    DEFAULT_API_KEY=$(grep "^MCP_API_KEY=" "$CFG_FILE" 2>/dev/null | cut -d= -f2-)
+fi
+
+echo ""
+echo "  Chave de acesso do servidor (API Key)."
+echo -e "  ${DIM}Fornecida pelo admin do time. Protege contra uso não autorizado.${RESET}"
+echo ""
+
+if [ -n "$DEFAULT_API_KEY" ]; then
+    read -r -s -p "  MCP_API_KEY [manter atual]: " API_KEY
+    echo ""
+    API_KEY=${API_KEY:-$DEFAULT_API_KEY}
+else
+    read -r -s -p "  MCP_API_KEY: " API_KEY
+    echo ""
+fi
+
+while [ -z "$API_KEY" ]; do
+    echo -e "  ${RED}✗${RESET} API Key é obrigatória."
+    read -r -s -p "  MCP_API_KEY: " API_KEY
+    echo ""
+done
+
 echo ""
 
 # ── 2. Credenciais Databricks ────────────────────────────────
@@ -133,6 +159,7 @@ mkdir -p "$MCP_HOME/commands" "$MCP_HOME/agents"
 if [ "$CONFIGURE_CREDS" = "s" ]; then
     cat > "$CFG_FILE" << EOF
 MCP_SERVER_URL=$SERVER_URL
+MCP_API_KEY=$API_KEY
 DATABRICKS_HOST=$DB_HOST
 DATABRICKS_TOKEN=$DB_TOKEN
 EOF
@@ -147,6 +174,12 @@ else
         sed -i "s|^MCP_SERVER_URL=.*|MCP_SERVER_URL=$SERVER_URL|" "$CFG_FILE"
     else
         echo "MCP_SERVER_URL=$SERVER_URL" >> "$CFG_FILE"
+    fi
+
+    if grep -q "^MCP_API_KEY=" "$CFG_FILE" 2>/dev/null; then
+        sed -i "s|^MCP_API_KEY=.*|MCP_API_KEY=$API_KEY|" "$CFG_FILE"
+    else
+        echo "MCP_API_KEY=$API_KEY" >> "$CFG_FILE"
     fi
 
     DB_HOST=$(grep "^DATABRICKS_HOST=" "$CFG_FILE" | cut -d= -f2-)
@@ -269,7 +302,7 @@ echo -e "  ${GREEN}✓${RESET} CLAUDE.md instalado"
 MCP_JSON="$CLAUDE_GLOBAL/.mcp.json"
 MCP_URL="${SERVER_URL}/mcp"
 
-HEADERS_JSON="{\"X-Databricks-Host\": \"${DB_HOST}\", \"X-Databricks-Token\": \"${DB_TOKEN}\""
+HEADERS_JSON="{\"X-API-Key\": \"${API_KEY}\", \"X-Databricks-Host\": \"${DB_HOST}\", \"X-Databricks-Token\": \"${DB_TOKEN}\""
 if [ -n "$DB_WAREHOUSE" ]; then
     HEADERS_JSON="${HEADERS_JSON}, \"X-Databricks-Warehouse-Id\": \"${DB_WAREHOUSE}\""
 fi

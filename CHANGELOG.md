@@ -5,6 +5,23 @@ Todas as alterações relevantes deste projeto são documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [0.1.5] - 2026-03-21
+
+### Correções
+
+- fix: usa `claude mcp add` nos instaladores e atualiza docs
+
+### Outros
+
+- Merge pull request #13 from rasterxdev/develop
+
+**Diff completo:** [v0.1.4...v0.1.5](https://github.com/rasterxdev/databricks-mcp-toolkit/compare/v0.1.4...v0.1.5)
+
+Todas as alterações relevantes deste projeto são documentadas neste arquivo.
+
+O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
+e este projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
+
 ## [0.1.4] - 2026-03-21
 
 ### Correções

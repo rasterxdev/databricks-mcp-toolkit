@@ -22,6 +22,7 @@ from textwrap import dedent
 
 from databricks.sdk import WorkspaceClient
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -48,6 +49,11 @@ _WAREHOUSE_TTL = 300  # 5 minutes
 # Initialization
 # ---------------------------------------------------------------------------
 
+# DNS rebinding protection: disable for cloud deploy (auth is via API Key)
+_transport_security = TransportSecuritySettings(
+    enable_dns_rebinding_protection=False,
+)
+
 mcp = FastMCP(
     "Databricks",
     instructions=dedent("""
@@ -56,6 +62,7 @@ mcp = FastMCP(
         and managing workspace resources via Unity Catalog, MLflow,
         and Model Serving.
     """).strip(),
+    transport_security=_transport_security,
 )
 
 

@@ -5,6 +5,23 @@ Todas as alterações relevantes deste projeto são documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [0.1.4] - 2026-03-21
+
+### Correções
+
+- fix: desabilita DNS rebinding protection para deploy em cloud
+
+### Outros
+
+- Merge pull request #11 from rasterxdev/develop
+
+**Diff completo:** [v0.1.3...v0.1.4](https://github.com/rasterxdev/databricks-mcp-toolkit/compare/v0.1.3...v0.1.4)
+
+Todas as alterações relevantes deste projeto são documentadas neste arquivo.
+
+O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
+e este projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
+
 ## [0.1.3] - 2026-03-21
 
 ### Novidades

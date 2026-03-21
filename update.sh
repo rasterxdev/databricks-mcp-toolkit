@@ -2,8 +2,9 @@
 # ─────────────────────────────────────────────────────────────
 # Databricks MCP Toolkit — Atualizador
 #
-# Baixa a versão mais recente do GitHub e atualiza os arquivos
-# locais. Não altera credenciais.
+# Atualiza agentes, skills e configuração local para a
+# versão mais recente do repositório.
+# Não altera credenciais nem configuração do servidor.
 # ─────────────────────────────────────────────────────────────
 
 set -e
@@ -30,7 +31,8 @@ fi
 REMOTE_VERSION=$(curl -fsSL "$REPO_RAW/VERSION" 2>/dev/null || echo "")
 
 if [ -z "$REMOTE_VERSION" ]; then
-    echo -e "  ${YELLOW}❌${RESET} Não foi possível verificar a versão remota."
+    echo -e "  ${YELLOW}!${RESET} Não foi possível verificar a versão remota."
+    echo "  Verifique sua conexão com a internet."
     exit 1
 fi
 
@@ -49,56 +51,36 @@ if [ "$LOCAL_VERSION" = "$REMOTE_VERSION" ]; then
     exit 0
 fi
 
-# ── Baixar arquivos ──────────────────────────────────────────
+# ── Baixar skills e agents ──────────────────────────────────
 
-echo -e "${BOLD}  📥 Baixando arquivos...${RESET}"
+echo -e "  ${CYAN}Atualizando $LOCAL_VERSION → $REMOTE_VERSION ...${RESET}"
 echo ""
 
 mkdir -p "$MCP_HOME/commands" "$MCP_HOME/agents"
 
-curl -fsSL "$REPO_RAW/databricks_mcp/server.py" -o "$MCP_HOME/server.py"
-echo -e "  ${GREEN}✓${RESET} MCP Server"
-
-SKILLS="sql analyze notebook explore predict stats timeseries model feature"
+SKILLS="sql analyze notebook explore predict stats timeseries model feature databricks-update"
 for skill in $SKILLS; do
-    curl -fsSL "$REPO_RAW/.claude/commands/${skill}.md" -o "$MCP_HOME/commands/${skill}.md"
+    curl -fsSL "$REPO_RAW/.claude/commands/${skill}.md" -o "$MCP_HOME/commands/${skill}.md" 2>/dev/null || true
 done
-echo -e "  ${GREEN}✓${RESET} Skills"
+echo -e "  ${GREEN}✓${RESET} Skills atualizadas"
 
 AGENTS="databricks-analyst data-scientist"
 for agent in $AGENTS; do
-    curl -fsSL "$REPO_RAW/.claude/agents/${agent}.md" -o "$MCP_HOME/agents/${agent}.md"
+    curl -fsSL "$REPO_RAW/.claude/agents/${agent}.md" -o "$MCP_HOME/agents/${agent}.md" 2>/dev/null || true
 done
-echo -e "  ${GREEN}✓${RESET} Agentes"
+echo -e "  ${GREEN}✓${RESET} Agentes atualizados"
 
-# Baixar o próprio update.sh e a skill de update
-curl -fsSL "$REPO_RAW/update.sh" -o "$MCP_HOME/update.sh"
+# Atualizar o próprio update.sh
+curl -fsSL "$REPO_RAW/update.sh" -o "$MCP_HOME/update.sh" 2>/dev/null || true
 chmod +x "$MCP_HOME/update.sh"
-curl -fsSL "$REPO_RAW/.claude/commands/databricks-update.md" -o "$MCP_HOME/commands/databricks-update.md"
-echo -e "  ${GREEN}✓${RESET} Atualizador"
 
-# ── Atualizar dependências ───────────────────────────────────
+# ── Copiar para ~/.claude/ ───────────────────────────────────
 
-echo ""
-echo -e "  ${DIM}Atualizando dependências...${RESET}"
-"$MCP_HOME/.venv/bin/pip" install --quiet --upgrade databricks-connect databricks-sdk "mcp[cli]" python-dotenv
-echo -e "  ${GREEN}✓${RESET} Dependências atualizadas"
-
-# ── Atualizar instalação global ──────────────────────────────
-
-INSTALL_MODE="global"
-if [ -f "$MCP_HOME/.install_mode" ]; then
-    INSTALL_MODE=$(cat "$MCP_HOME/.install_mode" | cut -d= -f2)
-fi
-
-if [ "$INSTALL_MODE" = "global" ] && [ -d "$CLAUDE_GLOBAL" ]; then
-    echo ""
-    echo -e "  ${DIM}Atualizando instalação global...${RESET}"
-
+if [ -d "$CLAUDE_GLOBAL" ]; then
     mkdir -p "$CLAUDE_GLOBAL/commands" "$CLAUDE_GLOBAL/agents"
     cp "$MCP_HOME/commands/"*.md "$CLAUDE_GLOBAL/commands/" 2>/dev/null || true
     cp "$MCP_HOME/agents/"*.md  "$CLAUDE_GLOBAL/agents/"   2>/dev/null || true
-    echo -e "  ${GREEN}✓${RESET} Skills e agentes globais atualizados"
+    echo -e "  ${GREEN}✓${RESET} Arquivos copiados para $CLAUDE_GLOBAL/"
 fi
 
 # ── Salvar nova versão ───────────────────────────────────────
@@ -107,9 +89,8 @@ echo "$REMOTE_VERSION" > "$MCP_HOME/.version"
 
 echo ""
 echo -e "${BOLD}══════════════════════════════════════════════════════════${RESET}"
-echo -e "${GREEN}${BOLD}  ✅ Atualizado: v${LOCAL_VERSION} → v${REMOTE_VERSION}${RESET}"
+echo -e "${GREEN}${BOLD}  Atualizado: v${LOCAL_VERSION} → v${REMOTE_VERSION}${RESET}"
 echo ""
-echo "  Reinicie o Claude Code para aplicar:"
-echo -e "    ${CYAN}exit${RESET}  e depois  ${CYAN}claude${RESET}"
+echo -e "  ${YELLOW}Reinicie o Claude Code para aplicar as mudanças.${RESET}"
 echo -e "${BOLD}══════════════════════════════════════════════════════════${RESET}"
 echo ""

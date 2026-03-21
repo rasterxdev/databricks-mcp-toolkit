@@ -5,6 +5,28 @@ Todas as alterações relevantes deste projeto são documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [0.1.3] - 2026-03-21
+
+### Novidades
+
+- feat: adiciona autenticação via API Key no MCP server
+
+### Documentação
+
+- docs: simplifica README para foco na instalação do usuário
+
+### Outros
+
+- Merge pull request #9 from rasterxdev/develop
+- Merge pull request #8 from rasterxdev/develop
+
+**Diff completo:** [v0.1.2...v0.1.3](https://github.com/rasterxdev/databricks-mcp-toolkit/compare/v0.1.2...v0.1.3)
+
+Todas as alterações relevantes deste projeto são documentadas neste arquivo.
+
+O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
+e este projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
+
 ## [0.1.2] - 2026-03-21
 
 ### Novidades

@@ -56,32 +56,25 @@ fi
 echo -e "  ${CYAN}Atualizando $LOCAL_VERSION → $REMOTE_VERSION ...${RESET}"
 echo ""
 
-mkdir -p "$MCP_HOME/commands" "$MCP_HOME/agents"
+mkdir -p "$CLAUDE_GLOBAL/commands" "$CLAUDE_GLOBAL/agents"
 
+# Skills (direto para ~/.claude/commands/)
 SKILLS="sql analyze notebook explore predict stats timeseries model feature governance infra migrate ingest observability lakehouse databricks-update"
 for skill in $SKILLS; do
-    curl -fsSL "$REPO_RAW/.claude/commands/${skill}.md" -o "$MCP_HOME/commands/${skill}.md" 2>/dev/null || true
+    curl -fsSL "$REPO_RAW/.claude/commands/${skill}.md" -o "$CLAUDE_GLOBAL/commands/${skill}.md" 2>/dev/null || true
 done
 echo -e "  ${GREEN}✓${RESET} Skills atualizadas"
 
+# Agents (direto para ~/.claude/agents/)
 AGENTS="databricks-analyst databricks-scientist databricks-engineer"
 for agent in $AGENTS; do
-    curl -fsSL "$REPO_RAW/.claude/agents/${agent}.md" -o "$MCP_HOME/agents/${agent}.md" 2>/dev/null || true
+    curl -fsSL "$REPO_RAW/.claude/agents/${agent}.md" -o "$CLAUDE_GLOBAL/agents/${agent}.md" 2>/dev/null || true
 done
 echo -e "  ${GREEN}✓${RESET} Agentes atualizados"
 
 # Atualizar o próprio update.sh
 curl -fsSL "$REPO_RAW/update.sh" -o "$MCP_HOME/update.sh" 2>/dev/null || true
 chmod +x "$MCP_HOME/update.sh"
-
-# ── Copiar para ~/.claude/ ───────────────────────────────────
-
-if [ -d "$CLAUDE_GLOBAL" ]; then
-    mkdir -p "$CLAUDE_GLOBAL/commands" "$CLAUDE_GLOBAL/agents"
-    cp "$MCP_HOME/commands/"*.md "$CLAUDE_GLOBAL/commands/" 2>/dev/null || true
-    cp "$MCP_HOME/agents/"*.md  "$CLAUDE_GLOBAL/agents/"   2>/dev/null || true
-    echo -e "  ${GREEN}✓${RESET} Arquivos copiados para $CLAUDE_GLOBAL/"
-fi
 
 # ── Salvar nova versão ───────────────────────────────────────
 

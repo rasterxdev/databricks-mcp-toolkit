@@ -72,7 +72,6 @@ databricks-mcp-toolkit/
 │   ├── commands/*.md             ← 16 skills
 │   └── agents/*.md               ← 3 agentes
 ├── scripts/
-│   ├── install.sh                ← Instalador via clone
 │   ├── release.sh                ← Automação de release
 │   └── post-release.sh           ← Publicação de release
 └── docs/                         ← Documentação detalhada

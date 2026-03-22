@@ -140,7 +140,6 @@ databricks_mcp/server.py        — MCP Server HTTP (deployado na cloud)
 Dockerfile, requirements.txt    — deployment do server
 fly.toml                        — config Fly.io (deploy gratuito)
 setup.sh, update.sh, VERSION    — raiz (URLs públicas, não mover)
-scripts/install.sh              — instalador via clone (contribuidores)
 scripts/release.sh              — automação de release (dev-only)
 scripts/post-release.sh         — publicação de release (dev-only)
 .claude/commands/*.md            — skills (slash commands)

@@ -16,6 +16,16 @@ O Databricks MCP Toolkit é um pacote completo de integração entre o [Claude C
 
 ---
 
+## Arquitetura
+
+<p align="center">
+  <img src="docs/architecture.svg" alt="Arquitetura do Databricks MCP Toolkit" width="100%">
+</p>
+
+[Ver detalhes da arquitetura →](docs/architecture.md)
+
+---
+
 ## O que está incluso
 
 ### Agentes
@@ -64,34 +74,25 @@ Acionados automaticamente pelo Claude Code conforme o tipo de tarefa.
 
 ### Pré-requisitos
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) instalado
-- Token de acesso pessoal (PAT) do Databricks
-- URL do servidor MCP (fornecida pelo admin do time)
+1. [Claude Code](https://docs.anthropic.com/en/docs/claude-code) instalado
+2. Host do Databricks (ex: `https://dbc-xxx.cloud.databricks.com`)
+3. Token de acesso pessoal (PAT) do Databricks
+4. URL do servidor MCP
+5. API Key do servidor MCP
 
-### Instalação rápida (recomendada)
+### Instalação
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rasterxdev/databricks-mcp-toolkit/main/setup.sh | bash
 ```
 
-O instalador pede a URL do servidor MCP e suas credenciais Databricks, depois configura agentes, skills e conexão MCP globalmente. **Nenhuma instalação de Python necessária.**
-
-### Instalação a partir do clone
-
-```bash
-git clone git@github.com:rasterxdev/databricks-mcp-toolkit.git && cd databricks-mcp-toolkit
-./scripts/install.sh
-```
+O instalador pede as informações acima e configura agentes, skills e conexão MCP globalmente. **Nenhuma instalação de Python necessária.**
 
 ---
 
 ## Atualização
 
-Rode `/databricks-update` no Claude Code ou manualmente:
-
-```bash
-~/.local/share/databricks-mcp/update.sh
-```
+Para atualizar agentes e skills, rode `/databricks-update` no Claude Code.
 
 ---
 

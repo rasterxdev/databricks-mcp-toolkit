@@ -30,7 +30,6 @@
 | `Dockerfile`, `requirements.txt` | `~/.claude/commands/`, `~/.claude/agents/` (skills e agentes) |
 | `.claude/commands/*.md` | `~/.claude.json` (config MCP, gerado por `claude mcp add`) |
 | `.claude/agents/*.md` | |
-| `scripts/install.sh` | |
 | `CLAUDE.md`, `README.md` | |
 
 ---

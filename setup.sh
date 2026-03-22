@@ -103,17 +103,17 @@ echo -e "  ${DIM}Fornecida pelo admin do time. Protege contra uso não autorizad
 echo ""
 
 if [ -n "$DEFAULT_API_KEY" ]; then
-    read -r -s -p "  MCP_API_KEY [manter atual]: " API_KEY < /dev/tty
+    read -r -s -p "  MCP_API_KEY (input oculto) [manter atual]: " API_KEY < /dev/tty
     echo ""
     API_KEY=${API_KEY:-$DEFAULT_API_KEY}
 else
-    read -r -s -p "  MCP_API_KEY: " API_KEY < /dev/tty
+    read -r -s -p "  MCP_API_KEY (input oculto): " API_KEY < /dev/tty
     echo ""
 fi
 
 while [ -z "$API_KEY" ]; do
     echo -e "  ${RED}✗${RESET} API Key é obrigatória."
-    read -r -s -p "  MCP_API_KEY: " API_KEY < /dev/tty
+    read -r -s -p "  MCP_API_KEY (input oculto): " API_KEY < /dev/tty
     echo ""
 done
 
@@ -172,7 +172,7 @@ echo ""
 echo -e "${BOLD}  Salvando configuração...${RESET}"
 echo ""
 
-mkdir -p "$MCP_HOME/commands" "$MCP_HOME/agents"
+mkdir -p "$MCP_HOME"
 
 if [ "$CONFIGURE_CREDS" = "s" ]; then
     cat > "$CFG_FILE" << EOF
@@ -209,151 +209,33 @@ fi
 
 echo -e "  ${GREEN}✓${RESET} Configuração salva em $CFG_FILE"
 
-# ── 4. Baixar skills, agents e versão ────────────────────────
+# ── 4. Baixar skills e agents direto para ~/.claude/ ──────────
 
 echo ""
 echo -e "${BOLD}  Baixando agentes e skills...${RESET}"
 echo ""
 
-# Skills
+mkdir -p "$CLAUDE_GLOBAL/commands" "$CLAUDE_GLOBAL/agents"
+
+# Skills (direto para ~/.claude/commands/)
 SKILLS="sql analyze notebook explore predict stats timeseries model feature governance infra migrate ingest observability lakehouse databricks-update"
 for skill in $SKILLS; do
-    curl -fsSL "$REPO_RAW/.claude/commands/${skill}.md" -o "$MCP_HOME/commands/${skill}.md"
+    curl -fsSL "$REPO_RAW/.claude/commands/${skill}.md" -o "$CLAUDE_GLOBAL/commands/${skill}.md"
 done
 echo -e "  ${GREEN}✓${RESET} Skills ($(echo "$SKILLS" | wc -w | tr -d ' '))"
 
-# Agents
+# Agents (direto para ~/.claude/agents/)
 AGENTS="databricks-analyst databricks-scientist databricks-engineer"
 for agent in $AGENTS; do
-    curl -fsSL "$REPO_RAW/.claude/agents/${agent}.md" -o "$MCP_HOME/agents/${agent}.md"
+    curl -fsSL "$REPO_RAW/.claude/agents/${agent}.md" -o "$CLAUDE_GLOBAL/agents/${agent}.md"
 done
 echo -e "  ${GREEN}✓${RESET} Agentes ($(echo "$AGENTS" | wc -w | tr -d ' '))"
 
-# Versão e atualizador
+# Versão e atualizador (em ~/.local/share/databricks-mcp/)
 curl -fsSL "$REPO_RAW/VERSION" -o "$MCP_HOME/.version"
 curl -fsSL "$REPO_RAW/update.sh" -o "$MCP_HOME/update.sh"
 chmod +x "$MCP_HOME/update.sh"
 echo -e "  ${GREEN}✓${RESET} Versionamento e auto-update"
-
-echo ""
-
-# ── 5. Instalar globalmente no ~/.claude/ ─────────────────────
-
-echo -e "${BOLD}  Instalando globalmente em $CLAUDE_GLOBAL/ ...${RESET}"
-echo ""
-
-mkdir -p "$CLAUDE_GLOBAL/commands" "$CLAUDE_GLOBAL/agents"
-
-# Copiar skills e agents
-cp "$MCP_HOME/commands/"*.md "$CLAUDE_GLOBAL/commands/" 2>/dev/null || true
-cp "$MCP_HOME/agents/"*.md  "$CLAUDE_GLOBAL/agents/"   2>/dev/null || true
-echo -e "  ${GREEN}✓${RESET} Agentes e skills instalados"
-
-# CLAUDE.md global (preservar existente se tiver conteúdo extra)
-CLAUDE_MD="$CLAUDE_GLOBAL/CLAUDE.md"
-MARKER="# Databricks MCP Toolkit"
-
-# Gerar conteúdo do bloco Databricks
-DATABRICKS_BLOCK=$(cat << 'CLAUDEMD_EOF'
-# Databricks MCP Toolkit
-
-## Ferramentas MCP disponíveis
-
-Ao interagir com o Databricks, **sempre** use as ferramentas MCP (prefixo `mcp__databricks__`) ao invés de rodar scripts Python via Bash:
-
-### Dados e SQL
-- `run_sql` — executar queries SQL (retorna markdown formatado)
-- `list_catalogs` / `list_schemas` / `list_tables` — navegar Unity Catalog
-- `describe_table` — schema detalhado de uma tabela (colunas, tipos, comentários)
-- `sample_table` — amostra rápida de dados
-- `table_stats` — estatísticas básicas (contagem, nulos, distinct por coluna)
-- `list_warehouses` — listar SQL Warehouses e seus estados
-- `query_history` — histórico de queries recentes
-
-### MLflow e Model Registry
-- `list_experiments` — listar experimentos MLflow no workspace
-- `get_experiment_runs` — listar runs de um experimento com métricas e parâmetros
-- `get_run_details` — detalhes completos de um run (params, métricas, tags, artifacts)
-- `compare_runs` — comparar múltiplos runs lado a lado (IDs separados por vírgula)
-- `get_metric_history` — histórico de uma métrica ao longo dos steps de treinamento
-- `list_registered_models` — listar modelos no Unity Catalog Model Registry
-- `get_model_versions` — listar versões de um modelo registrado
-- `list_serving_endpoints` — listar model serving endpoints
-- `get_serving_endpoint` — detalhes de um serving endpoint específico
-
-### Infraestrutura, Governança e Delta Sharing
-- `list_jobs` — listar todos os jobs (workflows) do workspace
-- `list_job_runs` — listar execuções recentes de um job específico
-- `list_clusters` — listar todos os clusters de compute
-- `list_pipelines` — listar pipelines DLT (Delta Live Tables)
-- `get_grants` — obter grants (permissões diretas) de um objeto do Unity Catalog
-- `get_effective_grants` — obter grants efetivos (herdados + diretos) de um objeto
-- `list_shares` — listar shares do Delta Sharing
-- `list_share_recipients` — listar recipients do Delta Sharing
-
-## Skills (slash commands)
-
-### Análise de dados
-- `/sql <query ou descrição>` — executar SQL ou gerar SQL a partir de linguagem natural
-- `/analyze <catalog.schema.table>` — análise exploratória completa (EDA)
-- `/notebook <descrição>` — criar notebook Python/PySpark no formato Databricks
-- `/explore [catalog[.schema[.table]]]` — navegar Unity Catalog progressivamente
-
-### Ciência de dados e ML
-- `/predict <tabela e objetivo>` — criar notebook com pipeline ML completo (EDA → features → treino → avaliação → MLflow)
-- `/stats <tabela ou descrição>` — executar testes estatísticos e análises avançadas via SQL
-- `/timeseries <tabela ou descrição>` — análise de séries temporais + notebook de forecasting
-- `/model <comando>` — inspecionar experimentos, runs, modelos e endpoints MLflow
-- `/feature <tabela e target>` — análise de features e geração de pipeline de feature engineering
-
-### Engenharia de dados e arquitetura
-- `/governance [catalog[.schema[.table]]]` — auditar governança de dados e permissões de acesso
-- `/infra` — revisar infraestrutura e gerar recomendações de otimização
-- `/migrate <plataforma e descrição>` — gerar plano de migração de outra plataforma para Databricks
-- `/ingest <fonte e destino>` — criar notebook de pipeline de ingestão de dados
-- `/observability` — monitorar workspace via system tables
-- `/lakehouse` — revisar arquitetura lakehouse e gerar plano de melhorias
-
-## Agents especializados
-
-O agent `databricks-analyst` é acionado automaticamente para tarefas de análise de dados,
-exploração de tabelas, escrita de SQL e criação de notebooks PySpark.
-
-O agent `databricks-scientist` é acionado para tarefas de ciência de dados: ML lifecycle (MLflow),
-análise estatística avançada, feature engineering, séries temporais e modelos preditivos.
-
-O agent `databricks-engineer` é acionado para tarefas de engenharia de dados e arquitetura:
-lakehouse design, migração, governança, infraestrutura, ingestão e observabilidade.
-
-## Convenções
-
-- Formato de notebook Databricks: arquivos `.py` com `# Databricks notebook source` e `# COMMAND ----------`
-- SQL: preferir CTEs sobre subqueries
-- Sempre limitar resultados com LIMIT em queries exploratórias
-- Nomes de tabelas no formato completo: `catalog.schema.table`
-- Ao analisar uma tabela, seguir o fluxo: describe → stats → sample → queries específicas
-CLAUDEMD_EOF
-)
-
-if [ -f "$CLAUDE_MD" ]; then
-    # Remover bloco Databricks existente e substituir
-    if grep -q "$MARKER" "$CLAUDE_MD"; then
-        # Arquivo tem bloco Databricks — substituir
-        # Pegar tudo ANTES do marcador
-        BEFORE=$(sed "/$MARKER/,\$d" "$CLAUDE_MD")
-        if [ -n "$BEFORE" ]; then
-            printf '%s\n\n%s\n' "$BEFORE" "$DATABRICKS_BLOCK" > "$CLAUDE_MD"
-        else
-            echo "$DATABRICKS_BLOCK" > "$CLAUDE_MD"
-        fi
-    else
-        # Arquivo existe mas não tem bloco Databricks — adicionar ao final
-        printf '\n\n%s\n' "$DATABRICKS_BLOCK" >> "$CLAUDE_MD"
-    fi
-else
-    echo "$DATABRICKS_BLOCK" > "$CLAUDE_MD"
-fi
-echo -e "  ${GREEN}✓${RESET} CLAUDE.md instalado"
 
 # ── 6. Registrar MCP server via Claude CLI ───────────────────
 

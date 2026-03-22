@@ -726,6 +726,264 @@ def get_serving_endpoint(endpoint_name: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Tools — Infrastructure, Governance & Delta Sharing
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool()
+def list_jobs(max_results: int = 20) -> str:
+    """List all jobs (workflows) in the workspace.
+
+    Args:
+        max_results: Maximum number of jobs to return (default: 20).
+    """
+    client = _get_client()
+
+    jobs = []
+    for j in client.jobs.list():
+        jobs.append(j)
+        if len(jobs) >= max_results:
+            break
+
+    if not jobs:
+        return "No jobs found."
+
+    lines = ["| Job ID | Name | Schedule | Created At |",
+             "| --- | --- | --- | --- |"]
+
+    for j in jobs:
+        name = j.settings.name if j.settings else "-"
+        schedule = "-"
+        if j.settings and j.settings.schedule:
+            schedule = j.settings.schedule.quartz_cron_expression or "-"
+        created = "-"
+        if j.created_time:
+            created = datetime.fromtimestamp(
+                j.created_time / 1000, tz=timezone.utc
+            ).strftime("%Y-%m-%d %H:%M")
+        lines.append(f"| {j.job_id} | {name} | {schedule} | {created} |")
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def list_job_runs(job_id: int, max_results: int = 10) -> str:
+    """List recent runs of a specific job.
+
+    Args:
+        job_id: Databricks job ID.
+        max_results: Maximum number of runs to return (default: 10).
+    """
+    client = _get_client()
+
+    runs = []
+    for r in client.jobs.list_runs(job_id=job_id):
+        runs.append(r)
+        if len(runs) >= max_results:
+            break
+
+    if not runs:
+        return f"No runs found for job '{job_id}'."
+
+    lines = ["| Run ID | State | Result | Start Time | Duration (s) |",
+             "| --- | --- | --- | --- | --- |"]
+
+    for r in runs:
+        state = str(r.state.life_cycle_state).split(".")[-1] if r.state and r.state.life_cycle_state else "-"
+        result = str(r.state.result_state).split(".")[-1] if r.state and r.state.result_state else "-"
+        start = "-"
+        if r.start_time:
+            start = datetime.fromtimestamp(
+                r.start_time / 1000, tz=timezone.utc
+            ).strftime("%Y-%m-%d %H:%M")
+        duration = "-"
+        if r.start_time and r.end_time:
+            duration = str(int((r.end_time - r.start_time) / 1000))
+        lines.append(f"| {r.run_id} | {state} | {result} | {start} | {duration} |")
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def list_clusters() -> str:
+    """List all compute clusters in the workspace."""
+    client = _get_client()
+    clusters = list(client.clusters.list())
+
+    if not clusters:
+        return "No clusters found."
+
+    lines = ["| Cluster ID | Name | State | Spark Version | Node Type | Workers |",
+             "| --- | --- | --- | --- | --- | --- |"]
+
+    for c in clusters:
+        state = str(c.state).split(".")[-1] if c.state else "-"
+        workers = "-"
+        if c.autoscale:
+            workers = f"{c.autoscale.min_workers}-{c.autoscale.max_workers} (auto)"
+        elif c.num_workers is not None:
+            workers = str(c.num_workers)
+        lines.append(
+            f"| {c.cluster_id} | {c.cluster_name} | {state} "
+            f"| {c.spark_version or '-'} | {c.node_type_id or '-'} | {workers} |"
+        )
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def list_pipelines(max_results: int = 20) -> str:
+    """List Delta Live Tables (DLT) pipelines in the workspace.
+
+    Args:
+        max_results: Maximum number of pipelines to return (default: 20).
+    """
+    client = _get_client()
+    response = client.pipelines.list_pipelines(max_results=max_results)
+
+    pipelines = response.statuses if response.statuses else []
+    if not pipelines:
+        return "No DLT pipelines found."
+
+    lines = ["| Pipeline ID | Name | State | Creator |",
+             "| --- | --- | --- | --- |"]
+
+    for p in pipelines:
+        state = str(p.state).split(".")[-1] if p.state else "-"
+        lines.append(f"| {p.pipeline_id} | {p.name or '-'} | {state} | {p.creator_user_name or '-'} |")
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def get_grants(securable_type: str, full_name: str) -> str:
+    """Get grants (permissions) on a Unity Catalog securable object.
+
+    Args:
+        securable_type: Type of object (catalog, schema, table, volume, function, model, share, etc.).
+        full_name: Fully qualified name of the object.
+    """
+    from databricks.sdk.service.catalog import SecurableType
+
+    client = _get_client()
+
+    try:
+        sec_type = SecurableType(securable_type.upper())
+    except ValueError:
+        valid = ", ".join(t.value.lower() for t in SecurableType)
+        return f"ERROR: Invalid securable_type '{securable_type}'. Valid types: {valid}"
+
+    result = client.grants.get(securable_type=sec_type, full_name=full_name)
+
+    if not result.privilege_assignments:
+        return f"No grants found on {securable_type} '{full_name}'."
+
+    lines = [f"## Grants on {securable_type} `{full_name}`\n",
+             "| Principal | Privileges |",
+             "| --- | --- |"]
+
+    for assignment in result.privilege_assignments:
+        principal = assignment.principal or "-"
+        privs = ", ".join(
+            str(p.privilege).split(".")[-1] for p in (assignment.privileges or [])
+        )
+        lines.append(f"| {principal} | {privs} |")
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def get_effective_grants(securable_type: str, full_name: str) -> str:
+    """Get effective (inherited + direct) grants on a Unity Catalog securable object.
+
+    Args:
+        securable_type: Type of object (catalog, schema, table, volume, function, model, share, etc.).
+        full_name: Fully qualified name of the object.
+    """
+    from databricks.sdk.service.catalog import SecurableType
+
+    client = _get_client()
+
+    try:
+        sec_type = SecurableType(securable_type.upper())
+    except ValueError:
+        valid = ", ".join(t.value.lower() for t in SecurableType)
+        return f"ERROR: Invalid securable_type '{securable_type}'. Valid types: {valid}"
+
+    result = client.grants.get_effective(securable_type=sec_type, full_name=full_name)
+
+    if not result.privilege_assignments:
+        return f"No effective grants found on {securable_type} '{full_name}'."
+
+    lines = [f"## Effective Grants on {securable_type} `{full_name}`\n",
+             "| Principal | Privileges | Inherited From |",
+             "| --- | --- | --- |"]
+
+    for assignment in result.privilege_assignments:
+        principal = assignment.principal or "-"
+        for priv in (assignment.privileges or []):
+            priv_name = str(priv.privilege).split(".")[-1]
+            inherited = priv.inherited_from_name or "direct"
+            lines.append(f"| {principal} | {priv_name} | {inherited} |")
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def list_shares() -> str:
+    """List Delta Sharing shares in the workspace."""
+    client = _get_client()
+    shares = list(client.shares.list())
+
+    if not shares:
+        return "No Delta Sharing shares found."
+
+    lines = ["| Name | Created At | Updated At | Comment |",
+             "| --- | --- | --- | --- |"]
+
+    for s in shares:
+        created = "-"
+        if s.created_at:
+            created = datetime.fromtimestamp(
+                s.created_at / 1000, tz=timezone.utc
+            ).strftime("%Y-%m-%d %H:%M")
+        updated = "-"
+        if s.updated_at:
+            updated = datetime.fromtimestamp(
+                s.updated_at / 1000, tz=timezone.utc
+            ).strftime("%Y-%m-%d %H:%M")
+        comment = (s.comment or "")[:60]
+        lines.append(f"| {s.name} | {created} | {updated} | {comment} |")
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def list_share_recipients() -> str:
+    """List Delta Sharing recipients in the workspace."""
+    client = _get_client()
+    recipients = list(client.recipients.list())
+
+    if not recipients:
+        return "No Delta Sharing recipients found."
+
+    lines = ["| Name | Auth Type | Created At | Comment |",
+             "| --- | --- | --- | --- |"]
+
+    for r in recipients:
+        auth_type = str(r.authentication_type).split(".")[-1] if r.authentication_type else "-"
+        created = "-"
+        if r.created_at:
+            created = datetime.fromtimestamp(
+                r.created_at / 1000, tz=timezone.utc
+            ).strftime("%Y-%m-%d %H:%M")
+        comment = (r.comment or "")[:60]
+        lines.append(f"| {r.name} | {auth_type} | {created} | {comment} |")
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # ASGI Middleware — API Key auth + credential extraction from HTTP headers
 # ---------------------------------------------------------------------------
 

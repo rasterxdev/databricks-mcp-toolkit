@@ -131,3 +131,78 @@ Analisa features de uma tabela e gera pipelines de feature engineering.
 ```
 
 **O que faz:** classifica features por tipo, analisa correlação com target, recomenda transformações (encoding, scaling, window features) e opcionalmente gera um notebook com o pipeline completo.
+
+---
+
+## Engenharia de dados e arquitetura
+
+### `/governance` — Auditar governança de dados
+
+Audita permissões e políticas de acesso no Unity Catalog.
+
+```
+/governance silver
+/governance silver.ibge.ipca_mensal
+```
+
+**O que faz:** lista grants diretos e efetivos (herdados) de catálogos, schemas e tabelas; identifica permissões excessivas; gera relatório de conformidade com recomendações.
+
+---
+
+### `/infra` — Revisar infraestrutura
+
+Revisa clusters, warehouses, jobs e pipelines com recomendações de otimização.
+
+```
+/infra
+```
+
+**O que faz:** lista clusters, warehouses e jobs; analisa configurações, utilização e custos; gera recomendações de right-sizing, auto-scaling e políticas de terminação.
+
+---
+
+### `/migrate` — Plano de migração
+
+Gera um plano de migração de outra plataforma para Databricks.
+
+```
+/migrate Redshift — 50 tabelas, ETL em Python, dados em S3
+```
+
+**O que faz:** mapeia componentes da plataforma de origem para equivalentes Databricks; gera checklist de migração, notebooks de exemplo e estimativa de esforço.
+
+---
+
+### `/ingest` — Pipeline de ingestão
+
+Cria um notebook de pipeline de ingestão de dados.
+
+```
+/ingest arquivos CSV no S3 para bronze.raw.vendas
+```
+
+**O que faz:** gera notebook Databricks com pipeline de ingestão usando Auto Loader, COPY INTO ou leitura direta, incluindo schema inference, tratamento de erros e checkpointing.
+
+---
+
+### `/observability` — Monitorar workspace
+
+Monitora o workspace Databricks via system tables.
+
+```
+/observability
+```
+
+**O que faz:** consulta system tables (`system.billing.usage`, `system.access.audit`, `system.compute.clusters`) para gerar dashboard de custos, queries lentas, falhas de jobs e atividade de usuários.
+
+---
+
+### `/lakehouse` — Revisar arquitetura lakehouse
+
+Revisa a arquitetura lakehouse e gera plano de melhorias.
+
+```
+/lakehouse
+```
+
+**O que faz:** analisa a estrutura de catálogos, schemas e tabelas; verifica aderência ao padrão medallion (bronze/silver/gold); identifica tabelas sem particionamento, Z-ordering ou liquid clustering; gera recomendações de otimização.

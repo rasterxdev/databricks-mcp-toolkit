@@ -34,6 +34,16 @@ Ao interagir com o Databricks, **sempre** use as ferramentas MCP (prefixo `mcp__
 - `list_serving_endpoints` — listar model serving endpoints
 - `get_serving_endpoint` — detalhes de um serving endpoint específico
 
+### Infraestrutura, Governança e Delta Sharing
+- `list_jobs` — listar todos os jobs (workflows) do workspace
+- `list_job_runs` — listar execuções recentes de um job específico
+- `list_clusters` — listar todos os clusters de compute
+- `list_pipelines` — listar pipelines DLT (Delta Live Tables)
+- `get_grants` — obter grants (permissões diretas) de um objeto do Unity Catalog
+- `get_effective_grants` — obter grants efetivos (herdados + diretos) de um objeto
+- `list_shares` — listar shares do Delta Sharing
+- `list_share_recipients` — listar recipients do Delta Sharing
+
 ## Skills (slash commands)
 
 ### Análise de dados
@@ -49,6 +59,14 @@ Ao interagir com o Databricks, **sempre** use as ferramentas MCP (prefixo `mcp__
 - `/model <comando>` — inspecionar experimentos, runs, modelos e endpoints MLflow
 - `/feature <tabela e target>` — análise de features e geração de pipeline de feature engineering
 
+### Engenharia de dados e arquitetura
+- `/governance [catalog[.schema[.table]]]` — auditar governança de dados e permissões de acesso
+- `/infra` — revisar infraestrutura e gerar recomendações de otimização
+- `/migrate <plataforma e descrição>` — gerar plano de migração de outra plataforma para Databricks
+- `/ingest <fonte e destino>` — criar notebook de pipeline de ingestão de dados
+- `/observability` — monitorar workspace via system tables
+- `/lakehouse` — revisar arquitetura lakehouse e gerar plano de melhorias
+
 ## Agents especializados
 
 O agent `databricks-analyst` é acionado automaticamente para tarefas de análise de dados,
@@ -56,6 +74,9 @@ exploração de tabelas, escrita de SQL e criação de notebooks PySpark.
 
 O agent `databricks-scientist` é acionado para tarefas de ciência de dados: ML lifecycle (MLflow),
 análise estatística avançada, feature engineering, séries temporais e modelos preditivos.
+
+O agent `databricks-engineer` é acionado para tarefas de engenharia de dados e arquitetura:
+lakehouse design, migração, governança, infraestrutura, ingestão e observabilidade.
 
 ## Convenções de dados
 

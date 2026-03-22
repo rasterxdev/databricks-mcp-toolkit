@@ -1,6 +1,6 @@
 # Agentes
 
-O toolkit inclui dois agentes especializados, acionados automaticamente pelo Claude Code conforme o tipo de tarefa.
+O toolkit inclui três agentes especializados, acionados automaticamente pelo Claude Code conforme o tipo de tarefa.
 
 ---
 
@@ -61,3 +61,39 @@ O agente entra em ação quando você pede coisas como:
 - "cria um modelo preditivo para churn"
 - "analisa a série temporal de vendas"
 - "faz feature engineering na tabela Y"
+
+---
+
+## `databricks-engineer`
+
+| Atributo | Detalhe |
+|---|---|
+| **Modelo** | Sonnet |
+| **Perfil** | Engenheiro de Dados sênior / Arquiteto de Dados |
+| **Ferramentas** | Todas as 26 ferramentas MCP (dados + MLflow + infra/governança) + Read, Write, Edit, Bash, Glob, Grep |
+
+### Capacidades
+
+1. **Lakehouse Architecture**: revisar e propor melhorias na arquitetura medallion (bronze/silver/gold)
+2. **Migração**: gerar planos de migração de outras plataformas (Redshift, BigQuery, Snowflake, on-prem) para Databricks
+3. **Governança de dados**: auditar permissões, grants e políticas de acesso no Unity Catalog
+4. **Infraestrutura**: revisar clusters, warehouses, jobs e pipelines com recomendações de otimização
+5. **Ingestão de dados**: criar notebooks de pipelines de ingestão (Auto Loader, COPY INTO, CDC)
+6. **Observabilidade**: monitorar workspace via system tables (custos, queries, jobs, auditoria)
+7. **Delta Sharing**: revisar shares e recipients de compartilhamento de dados
+
+### Quando é acionado
+
+O agente entra em ação quando você pede coisas como:
+- "audita as permissões do catálogo silver"
+- "cria um plano de migração do Redshift para Databricks"
+- "revisa a infraestrutura e sugere otimizações"
+- "cria um pipeline de ingestão para arquivos CSV no S3"
+- "monitora os custos do workspace"
+- "revisa a arquitetura lakehouse do projeto"
+
+### Fluxo recomendado
+
+O agente segue uma abordagem top-down:
+
+`list_catalogs` / `list_clusters` / `list_jobs` (visão geral) → `get_grants` / `get_effective_grants` (governança) → `list_pipelines` / `list_job_runs` (pipelines e execuções) → análise e recomendações

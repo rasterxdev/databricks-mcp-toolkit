@@ -5,6 +5,24 @@ Todas as alterações relevantes deste projeto são documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [0.2.0] - 2026-03-21
+
+### Novidades
+
+- feat: adiciona agent databricks-engineer + 8 tools + 6 skills
+- feat: renomeia agente data-scientist para databricks-scientist
+
+### Outros
+
+- Merge pull request #15 from rasterxdev/develop
+
+**Diff completo:** [v0.1.5...v0.2.0](https://github.com/rasterxdev/databricks-mcp-toolkit/compare/v0.1.5...v0.2.0)
+
+Todas as alterações relevantes deste projeto são documentadas neste arquivo.
+
+O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
+e este projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
+
 ## [0.1.5] - 2026-03-21
 
 ### Correções

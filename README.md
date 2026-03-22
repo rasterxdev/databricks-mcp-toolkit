@@ -83,7 +83,7 @@ Acionados automaticamente pelo Claude Code conforme o tipo de tarefa.
 ### Instalação
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rasterxdev/databricks-mcp-toolkit/main/setup.sh | bash
+curl -fsSL https://raw.githubusercontent.com/rasterxtech/databricks-mcp-toolkit/main/setup.sh | bash
 ```
 
 O instalador pede as informações acima e configura agentes, skills e conexão MCP globalmente. **Nenhuma instalação de Python necessária.**

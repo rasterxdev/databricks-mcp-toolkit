@@ -1,6 +1,6 @@
 # Ferramentas MCP
 
-O MCP Server roda remotamente e expõe 18 ferramentas que o Claude Code chama diretamente via o protocolo [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) por HTTP. O servidor é stateless — recebe credenciais Databricks via headers em cada request.
+O MCP Server roda remotamente e expõe 26 ferramentas que o Claude Code chama diretamente via o protocolo [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) por HTTP. O servidor é stateless — recebe credenciais Databricks via headers em cada request.
 
 ---
 
@@ -31,6 +31,19 @@ O MCP Server roda remotamente e expõe 18 ferramentas que o Claude Code chama di
 | `get_model_versions` | Lista versões de um modelo registrado | `get_model_versions("catalog.schema.model")` |
 | `list_serving_endpoints` | Lista model serving endpoints | Verificar endpoints ativos |
 | `get_serving_endpoint` | Detalhes de um serving endpoint específico | `get_serving_endpoint("my-endpoint")` |
+
+## Infraestrutura, Governança e Delta Sharing
+
+| Ferramenta | Descrição | Exemplo de uso |
+|---|---|---|
+| `list_jobs` | Lista todos os jobs (workflows) do workspace | Descobrir workflows configurados |
+| `list_job_runs` | Lista execuções recentes de um job específico | `list_job_runs("123456")` |
+| `list_clusters` | Lista todos os clusters de compute | Verificar clusters ativos e seus estados |
+| `list_pipelines` | Lista pipelines DLT (Delta Live Tables) | Descobrir pipelines configurados |
+| `get_grants` | Obtém grants (permissões diretas) de um objeto do Unity Catalog | `get_grants("catalog", "silver")` |
+| `get_effective_grants` | Obtém grants efetivos (herdados + diretos) de um objeto | `get_effective_grants("table", "silver.ibge.ipca_mensal")` |
+| `list_shares` | Lista shares do Delta Sharing | Descobrir dados compartilhados |
+| `list_share_recipients` | Lista recipients do Delta Sharing | Verificar quem recebe dados compartilhados |
 
 ## Como funciona a conexão
 

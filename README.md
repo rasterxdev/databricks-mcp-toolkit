@@ -2,7 +2,7 @@
 
 **Conecte o Claude Code ao seu workspace Databricks e transforme linguagem natural em queries, análises e notebooks, sem sair do terminal.**
 
-O Databricks MCP Toolkit é um pacote completo de integração entre o [Claude Code](https://docs.anthropic.com/en/docs/claude-code) e o Databricks. Ele inclui um MCP Server com 18 ferramentas, 2 agentes especializados e 9 skills prontos para uso imediato.
+O Databricks MCP Toolkit é um pacote completo de integração entre o [Claude Code](https://docs.anthropic.com/en/docs/claude-code) e o Databricks. Ele inclui um MCP Server com 26 ferramentas, 3 agentes especializados e 15 skills prontos para uso imediato.
 
 ---
 
@@ -25,7 +25,8 @@ Acionados automaticamente pelo Claude Code conforme o tipo de tarefa.
 | Agente | Perfil | Quando é acionado |
 |---|---|---|
 | `databricks-analyst` | Analista de Dados sênior | Exploração de dados, SQL, notebooks PySpark |
-| `data-scientist` | Cientista de Dados / ML Engineer | MLflow, modelos preditivos, séries temporais |
+| `databricks-scientist` | Cientista de Dados / ML Engineer | MLflow, modelos preditivos, séries temporais |
+| `databricks-engineer` | Engenheiro de Dados / Arquiteto de Dados | Lakehouse, migração, governança, infra, ingestão, observabilidade |
 
 [Ver detalhes dos agentes →](docs/agents.md)
 
@@ -42,12 +43,18 @@ Acionados automaticamente pelo Claude Code conforme o tipo de tarefa.
 | `/timeseries` | Análise de séries temporais + forecasting |
 | `/model` | Inspecionar experimentos, runs e endpoints MLflow |
 | `/feature` | Análise de features e pipeline de engineering |
+| `/governance` | Auditar governança de dados e permissões de acesso |
+| `/infra` | Revisar infraestrutura e gerar recomendações de otimização |
+| `/migrate` | Gerar plano de migração para Databricks |
+| `/ingest` | Criar pipeline de ingestão de dados |
+| `/observability` | Monitorar workspace via system tables |
+| `/lakehouse` | Revisar arquitetura lakehouse e gerar plano de melhorias |
 
 [Ver exemplos e detalhes →](docs/skills.md)
 
-### Ferramentas MCP (18)
+### Ferramentas MCP (26)
 
-9 ferramentas de dados (SQL, Unity Catalog) + 9 de MLflow (experimentos, modelos, endpoints). O Claude Code chama diretamente via protocolo MCP.
+9 ferramentas de dados (SQL, Unity Catalog) + 9 de MLflow (experimentos, modelos, endpoints) + 8 de infraestrutura, governança e Delta Sharing. O Claude Code chama diretamente via protocolo MCP.
 
 [Ver lista completa →](docs/tools.md)
 

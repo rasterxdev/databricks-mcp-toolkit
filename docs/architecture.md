@@ -5,7 +5,7 @@ O toolkit é composto por 3 camadas:
 ```
 Computador do Usuário                MCP Server (cloud)           Databricks
 ┌──────────────────┐              ┌──────────────────┐       ┌──────────────┐
-│ Claude Code (IA) │── HTTPS ──>  │ FastMCP (18 tools)│──>    │ Workspace    │
+│ Claude Code (IA) │── HTTPS ──>  │ FastMCP (26 tools)│──>    │ Workspace    │
 │ + agents/skills  │  headers     │ stateless, sem IA │ SDK   │ SQL, MLflow  │
 └──────────────────┘              └──────────────────┘       └──────────────┘
 ```
@@ -28,9 +28,12 @@ Computador do Usuário                MCP Server (cloud)           Databricks
 │   ├── sql.md, analyze.md, notebook.md, explore.md
 │   ├── predict.md, stats.md, timeseries.md
 │   ├── model.md, feature.md
+│   ├── governance.md, infra.md, migrate.md
+│   ├── ingest.md, observability.md, lakehouse.md
 └── agents/
     ├── databricks-analyst.md
-    └── data-scientist.md
+    ├── databricks-scientist.md
+    └── databricks-engineer.md
 
 ~/.claude/
 ├── CLAUDE.md                     ← Instruções globais para o Claude Code
@@ -38,7 +41,8 @@ Computador do Usuário                MCP Server (cloud)           Databricks
 │   ├── sql.md, analyze.md, ...
 └── agents/
     ├── databricks-analyst.md
-    └── data-scientist.md
+    ├── databricks-scientist.md
+    └── databricks-engineer.md
 
 ~/.claude.json                    ← Config MCP (gerado por `claude mcp add`)
 ```
@@ -65,8 +69,8 @@ databricks-mcp-toolkit/
 ├── CLAUDE.md                     ← Instruções para agentes (este repo)
 ├── README.md                     ← Documentação principal
 ├── .claude/
-│   ├── commands/*.md             ← 10 skills
-│   └── agents/*.md               ← 2 agentes
+│   ├── commands/*.md             ← 16 skills
+│   └── agents/*.md               ← 3 agentes
 ├── scripts/
 │   ├── install.sh                ← Instalador via clone
 │   ├── release.sh                ← Automação de release

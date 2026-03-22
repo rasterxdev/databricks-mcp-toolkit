@@ -31,7 +31,7 @@
   <text x="140" y="155" text-anchor="middle" font-size="9" fill="#666">Dados · SQL · Notebooks</text>
 
   <rect x="240" y="120" width="160" height="48" rx="8" fill="white" stroke="#a29bfe" stroke-width="1"/>
-  <text x="320" y="140" text-anchor="middle" font-size="10" font-weight="600" fill="#6c5ce7">data-scientist</text>
+  <text x="320" y="140" text-anchor="middle" font-size="10" font-weight="600" fill="#6c5ce7">databricks-scientist</text>
   <text x="320" y="155" text-anchor="middle" font-size="9" fill="#666">MLflow · ML · Séries</text>
 
   <!-- Skills -->

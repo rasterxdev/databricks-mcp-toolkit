@@ -58,13 +58,13 @@ echo ""
 
 mkdir -p "$MCP_HOME/commands" "$MCP_HOME/agents"
 
-SKILLS="sql analyze notebook explore predict stats timeseries model feature databricks-update"
+SKILLS="sql analyze notebook explore predict stats timeseries model feature governance infra migrate ingest observability lakehouse databricks-update"
 for skill in $SKILLS; do
     curl -fsSL "$REPO_RAW/.claude/commands/${skill}.md" -o "$MCP_HOME/commands/${skill}.md" 2>/dev/null || true
 done
 echo -e "  ${GREEN}✓${RESET} Skills atualizadas"
 
-AGENTS="databricks-analyst data-scientist"
+AGENTS="databricks-analyst databricks-scientist databricks-engineer"
 for agent in $AGENTS; do
     curl -fsSL "$REPO_RAW/.claude/agents/${agent}.md" -o "$MCP_HOME/agents/${agent}.md" 2>/dev/null || true
 done

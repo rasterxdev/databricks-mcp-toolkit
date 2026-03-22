@@ -29,5 +29,5 @@ curl -H "X-API-Key: SUA_KEY" https://SEU-SERVER.onrender.com/mcp
 Rode o instalador novamente — ele detecta credenciais existentes e oferece a opcao de substituir:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rasterxdev/databricks-mcp-toolkit/main/setup.sh | bash
+curl -fsSL https://raw.githubusercontent.com/rasterxtech/databricks-mcp-toolkit/main/setup.sh | bash
 ```

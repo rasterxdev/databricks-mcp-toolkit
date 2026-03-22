@@ -34,7 +34,7 @@ fatal() { error "$*"; exit 1; }
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION_FILE="$REPO_ROOT/VERSION"
 CHANGELOG_FILE="$REPO_ROOT/CHANGELOG.md"
-GITHUB_REPO="rasterxdev/databricks-mcp-toolkit"
+GITHUB_REPO="rasterxtech/databricks-mcp-toolkit"
 
 # =============================================================================
 # Validações

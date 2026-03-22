@@ -9,7 +9,7 @@
 
 set -e
 
-REPO_RAW="https://raw.githubusercontent.com/rasterxdev/databricks-mcp-toolkit/main"
+REPO_RAW="https://raw.githubusercontent.com/rasterxtech/databricks-mcp-toolkit/main"
 MCP_HOME="$HOME/.local/share/databricks-mcp"
 CLAUDE_GLOBAL="$HOME/.claude"
 

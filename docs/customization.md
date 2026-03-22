@@ -15,7 +15,7 @@ As credenciais sao configuradas durante a instalacao. O instalador salva uma cop
 Para reconfigurar, rode o instalador novamente:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rasterxdev/databricks-mcp-toolkit/main/setup.sh | bash
+curl -fsSL https://raw.githubusercontent.com/rasterxtech/databricks-mcp-toolkit/main/setup.sh | bash
 ```
 
 Ou reconfigure manualmente o MCP:

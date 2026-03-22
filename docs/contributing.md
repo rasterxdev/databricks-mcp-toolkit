@@ -5,7 +5,7 @@
 1. Obtenha com o admin do time: **URL do servidor MCP** e **API Key**
 2. Rode no terminal:
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/rasterxdev/databricks-mcp-toolkit/main/setup.sh | bash
+   curl -fsSL https://raw.githubusercontent.com/rasterxtech/databricks-mcp-toolkit/main/setup.sh | bash
    ```
 3. O instalador pedirá: URL do servidor, API Key, e token Databricks (ver abaixo como gerar)
 4. Reinicie o Claude Code e pronto
